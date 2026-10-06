@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School, Radio } from 'lucide-react';
 import { LiquidLinesCanvas } from '../components/LiquidLinesCanvas';
 import { BrandLogo } from '../components/BrandLogo';
 import type { FacultyUser } from '../types';
@@ -13,35 +13,35 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   onLoginSuccess,
   onExploreStudentPortal,
 }) => {
-  const [email, setEmail] = useState('dr.ramesh@klu.ac.in');
+  const [email, setEmail] = useState('coordinator.cs4200@klu.ac.in');
   const [password, setPassword] = useState('cresco@kare2026');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Preset demo accounts for faculty evaluators
-  const demoAccounts = [
+  // Staging Demo Accounts (clearly labelled as local staging access without fake metrics)
+  const stagingPresets = [
     {
-      name: 'Dr. K. Ramesh',
-      email: 'dr.ramesh@klu.ac.in',
+      title: 'Course Coordinator',
+      email: 'coordinator.cs4200@klu.ac.in',
       role: 'Course Coordinator' as const,
       designation: 'Professor & Chair',
-      staffId: 'KARE-FAC-0142',
+      staffId: 'FAC-COORD-4200',
       department: 'Computer Science & Engineering',
     },
     {
-      name: 'Dr. S. Sudha',
-      email: 'dr.sudha@klu.ac.in',
+      title: 'Lab Instructor',
+      email: 'lab.faculty@klu.ac.in',
       role: 'Lab Faculty' as const,
       designation: 'Associate Professor',
-      staffId: 'KARE-FAC-0389',
+      staffId: 'FAC-LAB-4200',
       department: 'Computer Science & Engineering',
     },
   ];
 
-  const handleSelectDemo = (account: (typeof demoAccounts)[0]) => {
-    setEmail(account.email);
+  const handleSelectPreset = (preset: (typeof stagingPresets)[0]) => {
+    setEmail(preset.email);
     setPassword('cresco@kare2026');
     setErrorMessage('');
   };
@@ -62,11 +62,11 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
 
     setTimeout(() => {
       setIsLoading(false);
-      const matched = demoAccounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
+      const matched = stagingPresets.find((a) => a.email.toLowerCase() === email.toLowerCase());
       const loggedUser: FacultyUser = matched
         ? {
             id: matched.staffId,
-            name: matched.name,
+            name: matched.title === 'Course Coordinator' ? 'Course Coordinator' : 'Lab Instructor',
             email: matched.email,
             department: matched.department,
             designation: matched.designation,
@@ -75,30 +75,30 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
             staffId: matched.staffId,
           }
         : {
-            id: 'KARE-FAC-AUTH',
-            name: email.split('@')[0].replace('.', ' ').toUpperCase(),
+            id: 'FAC-AUTH-CUSTOM',
+            name: 'Faculty Member',
             email: email,
             department: 'Computer Science & Engineering',
-            designation: 'Assistant Professor',
+            designation: 'Faculty Instructor',
             institution: 'Kalasalingam Academy of Research and Education',
             role: 'Course Coordinator',
-            staffId: 'KARE-FAC-9921',
+            staffId: 'FAC-AUTH-4200',
           };
 
       onLoginSuccess(loggedUser);
-    }, 450);
+    }, 400);
   };
 
   return (
-    <div className="login-page-bg">
+    <div className="login-page-bg" role="main">
       {/* 1. Dynamic Canvas: LiquidLines neon cyan wave */}
-      <div className="login-canvas-container">
+      <div className="login-canvas-container" aria-hidden="true">
         <LiquidLinesCanvas color="#06c8d9" secondaryColor="#10b981" opacity={0.85} speed={0.35} />
       </div>
 
       {/* Cyber grid & radial vignette overlays */}
-      <div className="login-grid-overlay" />
-      <div className="login-vignette" />
+      <div className="login-grid-overlay" aria-hidden="true" />
+      <div className="login-vignette" aria-hidden="true" />
 
       {/* 2. Fixed Escape Navigation (Top-left & Top-right) */}
       <header
@@ -124,7 +124,8 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
               window.open('https://cresco-cn-kare.vercel.app/', '_blank');
             }
           }}
-          title="Return to Student Portal"
+          title="Open Student Portal"
+          aria-label="Open Student Portal in new tab"
           style={{
             pointerEvents: 'auto',
             display: 'inline-flex',
@@ -139,6 +140,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
             fontFamily: 'var(--font-mono)',
             fontWeight: 700,
             backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             cursor: 'pointer',
             transition: 'all 180ms ease',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
@@ -164,6 +166,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
             fontFamily: 'var(--font-mono)',
             fontWeight: 700,
             backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
           }}
         >
           <span
@@ -180,7 +183,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       </header>
 
       {/* 3. Main Glassmorphic Login Card */}
-      <main
+      <div
         className="card-login-cyber"
         style={{
           zIndex: 30,
@@ -267,7 +270,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                     marginTop: '2px',
                   }}
                 >
-                  Manage course cohorts, live packet labs, and grading telemetry.
+                  Curriculum management, packet lab authoring, and evaluation console.
                 </p>
               </div>
 
@@ -293,7 +296,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                 </div>
               )}
 
-              {/* Quick Demo Selector */}
+              {/* Quick Preset Selector (Clearly labeled as staging presets) */}
               <div
                 style={{
                   backgroundColor: 'rgba(15, 23, 42, 0.75)',
@@ -323,18 +326,18 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                     }}
                   >
                     <Sparkles size={12} />
-                    QUICK DEMO FACULTY PRESETS
+                    STAGING DEMO ACCESS
                   </span>
-                  <span style={{ fontSize: '10px', color: '#64748b' }}>Click to fill</span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>Select role</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {demoAccounts.map((account) => {
-                    const isSelected = email === account.email;
+                  {stagingPresets.map((preset) => {
+                    const isSelected = email === preset.email;
                     return (
                       <button
-                        key={account.staffId}
+                        key={preset.staffId}
                         type="button"
-                        onClick={() => handleSelectDemo(account)}
+                        onClick={() => handleSelectPreset(preset)}
                         style={{
                           textAlign: 'left',
                           padding: '7px 9px',
@@ -355,7 +358,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                             fontFamily: 'var(--font-headline)',
                           }}
                         >
-                          {account.name}
+                          {preset.title}
                         </div>
                         <div
                           style={{
@@ -365,7 +368,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                             marginTop: '2px',
                           }}
                         >
-                          {account.role}
+                          {preset.email.split('@')[0]}
                         </div>
                       </button>
                     );
@@ -400,7 +403,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. dr.ramesh@klu.ac.in"
+                      placeholder="e.g. coordinator.cs4200@klu.ac.in"
                       className="input-mono"
                       style={{
                         width: '100%',
@@ -452,7 +455,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                       href="#forgot"
                       onClick={(e) => {
                         e.preventDefault();
-                        alert('Password reset link sent to registered KARE CSE faculty email.');
+                        alert('Password reset link will be sent to registered faculty email.');
                       }}
                       style={{
                         fontSize: '11px',
@@ -570,7 +573,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-tactile-sky"
+                  className="btn-tactile-sky interactive-scale"
                   style={{
                     width: '100%',
                     padding: '12px 18px',
@@ -593,7 +596,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                           animation: 'spin 0.6s linear infinite',
                         }}
                       />
-                      <span>Authenticating Faculty Credential...</span>
+                      <span>Authenticating Credentials...</span>
                     </span>
                   ) : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -630,11 +633,11 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
             </div>
           </div>
 
-          {/* Right Column (Teacher Illustration & Status - 34%, desktop) */}
+          {/* Right Column (Teacher Illustration & Telemetry - 34%, desktop) */}
           <div
             className="hidden-on-mobile"
             style={{
-              width: '200px',
+              width: '210px',
               backgroundColor: 'rgba(11, 19, 34, 0.65)',
               borderLeft: '1px solid rgba(56, 189, 248, 0.18)',
               display: 'flex',
@@ -669,7 +672,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
               />
             </div>
 
-            {/* Academic telemetry tags */}
+            {/* Real Institutional Metadata Cards without Fake Counters */}
             <div
               style={{
                 marginTop: '18px',
@@ -689,17 +692,17 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                 }}
               >
                 <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#6ee7b7' }}>
-                  ACTIVE COHORTS
+                  CURRICULUM
                 </div>
                 <div
                   style={{
-                    fontSize: '14px',
+                    fontSize: '12px',
                     fontWeight: 800,
                     color: '#f8fafc',
-                    fontFamily: 'var(--font-headline)',
+                    fontFamily: 'var(--font-mono)',
                   }}
                 >
-                  452 Students
+                  CS-4200 Networks
                 </div>
               </div>
 
@@ -712,26 +715,27 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                   textAlign: 'center',
                 }}
               >
-                <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
-                  CURRICULUM
+                <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Radio size={10} />
+                  <span>BACKEND STATUS</span>
                 </div>
                 <div
                   style={{
-                    fontSize: '12px',
-                    fontWeight: 800,
+                    fontSize: '11px',
+                    fontWeight: 700,
                     color: '#f8fafc',
                     fontFamily: 'var(--font-mono)',
+                    marginTop: '2px',
                   }}
                 >
-                  8 Active Labs
+                  Staging Mode
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* Style for responsive hiding and spinning */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }

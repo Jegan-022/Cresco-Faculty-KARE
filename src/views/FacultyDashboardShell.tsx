@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Users,
-  BookOpen,
   Layers,
   Clock,
   PlusCircle,
@@ -12,8 +11,13 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+  Inbox,
+  Database,
+  BookOpen,
 } from 'lucide-react';
 import type { FacultyUser, FacultyViewType } from '../types';
+import { EmptyState } from '../components/EmptyState';
+import { SkeletonCard } from '../components/SkeletonLoader';
 
 interface FacultyDashboardShellProps {
   user: FacultyUser;
@@ -28,65 +32,59 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
   onSelectView,
   onSwitchToLogin,
 }) => {
-  // Stat Metric Cards
+  const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
+
+  // Production-grade metric cards adhering to strict DATA RULE (no fabricated counts)
   const metrics = [
     {
       title: 'Enrolled Students',
-      value: '452',
-      change: '+18 this week',
-      isPositive: true,
-      caption: 'Across 4 Class Sections (A, B, C, D)',
+      value: '—',
+      statusText: 'No student data synced',
+      statusColor: 'var(--text-muted)',
+      caption: 'Awaiting Firestore database connection',
       accentColor: '#10b981',
       shadowColor: '#bbf7d0',
       icon: Users,
     },
     {
-      title: 'Average Mastery',
-      value: '78.4%',
-      change: '+4.2% vs midterm',
-      isPositive: true,
-      caption: 'Benchmark against KARE curriculum',
+      title: 'Cohort Average Mastery',
+      value: '—',
+      statusText: 'Awaiting submissions',
+      statusColor: 'var(--text-muted)',
+      caption: 'Calculates after packet labs are completed',
       accentColor: '#06b6d4',
       shadowColor: '#a5f3fc',
       icon: TrendingUp,
     },
     {
-      title: 'Packet Lab Scenarios',
-      value: '14 Active',
-      change: '2 new drafts',
-      isPositive: true,
-      caption: 'TCP/IP 3-Way Handshake, Subnetting',
+      title: 'Curriculum Units',
+      value: '5 Defined',
+      statusText: 'CS-4200 Syllabus',
+      statusColor: 'var(--success)',
+      caption: 'Physical, Data Link, IP, Transport, Application',
       accentColor: '#8b5cf6',
       shadowColor: '#ddd6fe',
       icon: Network,
     },
     {
       title: 'Pending Lab Reviews',
-      value: '18',
-      change: 'Due within 24h',
-      isPositive: false,
-      caption: 'Wireshark packet capture submissions',
+      value: '0',
+      statusText: 'Inbox clear',
+      statusColor: 'var(--text-muted)',
+      caption: 'No submissions awaiting instructor grading',
       accentColor: '#f59e0b',
       shadowColor: '#fde68a',
       icon: Clock,
     },
   ];
 
-  // Learning Levels in Cresco CN
+  // Official CS-4200 Curriculum modules (real syllabus, empty cohort progression)
   const learningLevels = [
-    { level: 'Level 1', name: 'Physical & Data Link Layer', status: 'Published', studentsPassed: 412, total: 452, icon: Radio },
-    { level: 'Level 2', name: 'IP Addressing & Subnetting', status: 'Published', studentsPassed: 388, total: 452, icon: Cpu },
-    { level: 'Level 3', name: 'Routing Protocols (RIP, OSPF, BGP)', status: 'Live Testing', studentsPassed: 320, total: 452, icon: Network },
-    { level: 'Level 4', name: 'Transport Layer & TCP Flow Control', status: 'In Review', studentsPassed: 215, total: 452, icon: Layers },
-    { level: 'Level 5', name: 'Application Protocols (DNS, HTTP/3, TLS)', status: 'Draft', studentsPassed: 0, total: 452, icon: BookOpen },
-  ];
-
-  // Recent student activity feed
-  const recentActivities = [
-    { student: 'K. Sai Varun', regNo: '9921004128', action: 'Completed Subnetting Lab #4', score: '95/100', time: '12m ago' },
-    { student: 'M. Ananya Rao', regNo: '9921004189', action: 'Submitted Wireshark Capture #2', score: 'Pending', time: '28m ago' },
-    { student: 'R. Vignesh', regNo: '9921004204', action: 'Achieved Level 3 Routing Master', score: '100/100', time: '45m ago' },
-    { student: 'P. Sneha', regNo: '9921004245', action: 'Requested Review on TCP Windowing', score: 'Help Req', time: '1h ago' },
+    { level: 'Level 1', name: 'Physical & Data Link Layer Fundamentals', status: 'Curriculum Ready', icon: Radio },
+    { level: 'Level 2', name: 'IPv4 / IPv6 Addressing & Subnetting (CIDR & VLSM)', status: 'Curriculum Ready', icon: Cpu },
+    { level: 'Level 3', name: 'Routing Protocols (RIP, OSPF, BGP Convergence)', status: 'Curriculum Ready', icon: Network },
+    { level: 'Level 4', name: 'Transport Layer Protocols & TCP Flow Control', status: 'Curriculum Ready', icon: Layers },
+    { level: 'Level 5', name: 'Application Protocols & Web Performance (HTTP/3, DNS)', status: 'Curriculum Ready', icon: BookOpen },
   ];
 
   return (
@@ -99,7 +97,8 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
       }}
     >
       {/* View Sub-Navigation Bar */}
-      <div
+      <nav
+        aria-label="Faculty sub-navigation"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -119,6 +118,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                 key={tab}
                 type="button"
                 onClick={() => onSelectView(tab)}
+                className="interactive-scale"
                 style={{
                   padding: '8px 16px',
                   borderRadius: '12px',
@@ -138,27 +138,35 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
           })}
         </div>
 
-        {/* Quick action buttons for faculty */}
+        {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
+            onClick={() => setShowSkeletonPreview(!showSkeletonPreview)}
+            className="btn-outline interactive-scale"
+            style={{ fontSize: '12px', padding: '7px 12px' }}
+          >
+            {showSkeletonPreview ? 'Hide Skeletons' : 'Preview Shimmer Skeletons'}
+          </button>
+          <button
+            type="button"
             onClick={onSwitchToLogin}
-            className="btn-outline"
+            className="btn-outline interactive-scale"
             style={{ fontSize: '12px', padding: '7px 14px' }}
           >
             ← View Faculty Login
           </button>
           <button
             type="button"
-            onClick={() => alert('New Computer Networks lab creation dialog triggered.')}
-            className="btn-tactile-primary"
+            onClick={() => alert('New assignment authoring dialog.')}
+            className="btn-tactile-primary interactive-scale"
             style={{ fontSize: '12.5px', padding: '9px 18px' }}
           >
             <PlusCircle size={15} />
             <span>Create Assignment</span>
           </button>
         </div>
-      </div>
+      </nav>
 
       {/* Main Grid: Asymmetric 68% / 32% (XL screen) */}
       <div
@@ -169,13 +177,14 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
         }}
         className="faculty-main-grid"
       >
-        {/* Main Left Content Area */}
+        {/* Main Left Content Area (68%) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           {/* 1. 3D Hero Banner (Conic / Deep Emerald Gradient) */}
-          <div
+          <section
+            aria-label="Course Overview Banner"
             style={{
               borderRadius: '24px',
-              padding: '28px 32px',
+              padding: '30px 32px',
               background: 'linear-gradient(135deg, #059669 0%, #047857 50%, #064e3b 100%)',
               color: '#ffffff',
               boxShadow: '0 12px 36px -6px rgba(16, 185, 129, 0.35)',
@@ -184,16 +193,16 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               border: '1px solid rgba(255, 255, 255, 0.2)',
             }}
           >
-            {/* Subtle background circuit aesthetic */}
+            {/* Background cyan radial glow */}
             <div
               style={{
                 position: 'absolute',
                 top: 0,
                 right: 0,
                 bottom: 0,
-                width: '40%',
+                width: '45%',
                 backgroundImage:
-                  'radial-gradient(circle at right, rgba(6, 182, 212, 0.25) 0%, transparent 70%)',
+                  'radial-gradient(circle at right, rgba(6, 182, 212, 0.28) 0%, transparent 70%)',
                 pointerEvents: 'none',
               }}
             />
@@ -204,10 +213,11 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '4px 10px',
+                  padding: '4px 12px',
                   borderRadius: '9999px',
                   backgroundColor: 'rgba(255, 255, 255, 0.15)',
                   backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   fontSize: '11px',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 700,
@@ -215,16 +225,8 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   letterSpacing: '0.04em',
                 }}
               >
-                <span
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '9999px',
-                    backgroundColor: '#34d399',
-                    boxShadow: '0 0 6px #34d399',
-                  }}
-                />
-                <span>KARE CS-4200 • COMPUTER NETWORKS CURRICULUM</span>
+                <Database size={12} style={{ color: '#6ee7b7' }} />
+                <span>CS-4200 COMPUTER NETWORKS • KARE FACULTY CONSOLE</span>
               </div>
 
               <h1
@@ -245,19 +247,19 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   fontSize: '14px',
                   opacity: 0.9,
                   lineHeight: 1.5,
-                  marginBottom: '20px',
-                  maxWidth: '560px',
+                  marginBottom: '22px',
+                  maxWidth: '580px',
                 }}
               >
-                Live synchronization is active with 452 enrolled students. Cohorts are currently
-                navigating OSI Layer 3 (Routing Protocols & Subnetting).
+                Kalasalingam Academy of Research and Education • Department of Computer Science & Engineering.
+                The 5 syllabus levels are defined and ready for class enrollment.
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => onSelectView('Learning Levels')}
-                  className="btn-tactile-primary"
+                  className="btn-tactile-primary interactive-scale"
                   style={{
                     backgroundColor: '#ffffff',
                     color: '#064e3b',
@@ -272,8 +274,8 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => alert('Exporting full class gradebook CSV...')}
-                  className="btn-outline"
+                  onClick={() => onSelectView('Students')}
+                  className="btn-outline interactive-scale"
                   style={{
                     color: '#ffffff',
                     borderColor: 'rgba(255, 255, 255, 0.4)',
@@ -283,14 +285,14 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   }}
                 >
                   <FileSpreadsheet size={15} />
-                  <span>Export Gradebook</span>
+                  <span>Import Cohort Roster</span>
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* 2. Tactile Stat Metric Cards */}
-          <div>
+          {/* 2. Tactile Stat Metric Cards (Empty / Real States) */}
+          <section aria-label="Course Telemetry Metrics">
             <div
               style={{
                 display: 'flex',
@@ -317,119 +319,136 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   fontWeight: 700,
                 }}
               >
-                SYNCED: JUST NOW
+                STATUS: STANDBY (UNSYNCED)
               </span>
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              {metrics.map((m) => {
-                const IconComp = m.icon;
-                return (
-                  <div
-                    key={m.title}
-                    className="card-standard"
-                    style={{
-                      padding: '18px 20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: `0 4px 0 0 ${m.shadowColor}`,
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '12px',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: 'var(--text-secondary)',
-                            fontFamily: 'var(--font-headline)',
-                          }}
-                        >
-                          {m.title}
-                        </span>
+            {showSkeletonPreview ? (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                {metrics.map((m) => {
+                  const IconComp = m.icon;
+                  return (
+                    <div
+                      key={m.title}
+                      className="card-standard interactive-scale"
+                      style={{
+                        padding: '18px 20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        boxShadow: `0 4px 0 0 ${m.shadowColor}`,
+                      }}
+                    >
+                      <div>
                         <div
                           style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '10px',
-                            backgroundColor: 'var(--surface-container)',
-                            color: m.accentColor,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '12px',
                           }}
                         >
-                          <IconComp size={16} />
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: 'var(--text-secondary)',
+                              fontFamily: 'var(--font-headline)',
+                            }}
+                          >
+                            {m.title}
+                          </span>
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '10px',
+                              backgroundColor: 'var(--surface-container)',
+                              color: m.accentColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <IconComp size={16} />
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            fontFamily: 'var(--font-headline)',
+                            fontSize: '26px',
+                            fontWeight: 900,
+                            color: 'var(--text-primary)',
+                            lineHeight: 1.1,
+                            marginBottom: '6px',
+                          }}
+                        >
+                          {m.value}
                         </div>
                       </div>
 
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-headline)',
-                          fontSize: '26px',
-                          fontWeight: 900,
-                          color: 'var(--text-primary)',
-                          lineHeight: 1.1,
-                          marginBottom: '6px',
-                        }}
-                      >
-                        {m.value}
+                      <div>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-mono)',
+                            color: m.statusColor,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <span>{m.statusText}</span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {m.caption}
+                        </div>
                       </div>
                     </div>
-
-                    <div>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          fontFamily: 'var(--font-mono)',
-                          color: m.isPositive ? 'var(--success)' : 'var(--warning)',
-                          marginBottom: '4px',
-                        }}
-                      >
-                        <span>{m.change}</span>
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {m.caption}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
           {/* 3. Learning Levels / Curriculum Progression */}
-          <div className="card-standard" style={{ padding: '24px' }}>
+          <section className="card-standard" style={{ padding: '24px' }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '18px',
+                flexWrap: 'wrap',
+                gap: '12px',
               }}
             >
               <div>
@@ -451,7 +470,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectView('Learning Levels')}
-                className="btn-outline"
+                className="btn-outline interactive-scale"
                 style={{ fontSize: '12px', padding: '6px 12px' }}
               >
                 <span>Manage Levels</span>
@@ -461,7 +480,6 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {learningLevels.map((lvl) => {
-                const percentage = Math.round((lvl.studentsPassed / lvl.total) * 100);
                 const IconComp = lvl.icon;
 
                 return (
@@ -518,56 +536,36 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                           </span>
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Status: {lvl.status} • {lvl.studentsPassed} of {lvl.total} Students Qualified
+                          Status: {lvl.status} • Awaiting cohort enrollment
                         </span>
                       </div>
                     </div>
 
-                    {/* Progress Bar with Gradient */}
-                    <div style={{ width: '160px' }}>
-                      <div
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
                           fontSize: '10.5px',
                           fontFamily: 'var(--font-mono)',
                           fontWeight: 700,
-                          marginBottom: '4px',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        <span>Completion</span>
-                        <span>{percentage}%</span>
-                      </div>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '8px',
+                          padding: '3px 8px',
                           borderRadius: '9999px',
                           backgroundColor: 'var(--surface-container)',
-                          overflow: 'hidden',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border)',
                         }}
                       >
-                        <div
-                          style={{
-                            width: `${percentage}%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, #10b981, #06b6d4)',
-                            borderRadius: '9999px',
-                            transition: 'width 600ms ease',
-                          }}
-                        />
-                      </div>
+                        No student data yet
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Tactical Rail / Analytics Sidebar (approx 32% on desktop) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Tactical Rail / Analytics Sidebar (32% on desktop) */}
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Instructor Quick Card */}
           <div className="card-standard" style={{ padding: '22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
@@ -643,14 +641,14 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
             <button
               type="button"
               onClick={() => onSelectView('Settings')}
-              className="btn-outline"
+              className="btn-outline interactive-scale"
               style={{ width: '100%', fontSize: '12.5px' }}
             >
               Manage Instructor Profile
             </button>
           </div>
 
-          {/* Live Student Submissions Feed */}
+          {/* Submissions Feed - High-fidelity Empty State adhering to DATA RULE */}
           <div className="card-standard" style={{ padding: '22px' }}>
             <div
               style={{
@@ -678,7 +676,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                   fontSize: '10px',
                   fontFamily: 'var(--font-mono)',
                   fontWeight: 700,
-                  color: 'var(--success)',
+                  color: 'var(--text-muted)',
                 }}
               >
                 <span
@@ -686,94 +684,20 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
                     width: '6px',
                     height: '6px',
                     borderRadius: '9999px',
-                    backgroundColor: '#10b981',
+                    backgroundColor: '#94a3b8',
                   }}
                 />
-                LIVE
+                STANDBY
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recentActivities.map((act) => (
-                <div
-                  key={act.regNo}
-                  style={{
-                    paddingBottom: '10px',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-headline)',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {act.student}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        fontFamily: 'var(--font-mono)',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      {act.time}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                    {act.action}
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginTop: '2px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        fontFamily: 'var(--font-mono)',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      {act.regNo}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '10.5px',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        color: act.score.includes('100') || act.score.includes('95')
-                          ? 'var(--success)'
-                          : act.score === 'Pending'
-                          ? 'var(--warning)'
-                          : 'var(--accent)',
-                      }}
-                    >
-                      {act.score}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onSelectView('Students')}
-              className="btn-outline"
-              style={{ width: '100%', marginTop: '14px', fontSize: '12px' }}
-            >
-              <span>View All 452 Students</span>
-              <ChevronRight size={13} />
-            </button>
+            <EmptyState
+              icon={Inbox}
+              badgeText="AWAITING SUBMISSIONS"
+              title="No submissions yet"
+              description="Student submissions for Wireshark captures, TCP handshakes, and packet routing labs will appear here once submitted."
+              style={{ padding: '28px 16px', border: '1px dashed var(--border)' }}
+            />
           </div>
 
           {/* Student Portal Cross-Reference Alert */}
@@ -810,6 +734,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               href="https://cresco-cn-kare.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
+              className="interactive-scale"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -826,7 +751,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               <ExternalLink size={12} />
             </a>
           </div>
-        </div>
+        </aside>
       </div>
 
       <style>{`

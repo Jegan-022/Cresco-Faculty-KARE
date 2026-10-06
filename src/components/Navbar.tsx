@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, Menu, X, LogOut } from 'lucide-react';
+import { Search, Bell, Menu, X, LogOut, Database } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { ThemeToggle } from './ThemeToggle';
 import type { FacultyUser } from '../types';
@@ -23,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   return (
     <header
+      role="banner"
       style={{
         position: 'sticky',
         top: 0,
@@ -47,6 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           type="button"
           onClick={onToggleSidebar}
           aria-label={isSidebarOpen ? 'Close Navigation Drawer' : 'Open Navigation Drawer'}
+          className="interactive-scale"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -72,6 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Center: Quick Search Pill */}
       <div
         className="navbar-search-container"
+        role="search"
         style={{
           flex: '1',
           maxWidth: '420px',
@@ -94,7 +97,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search students, packet labs, question bank..."
+          placeholder="Search curriculum modules, syllabi..."
+          aria-label="Search curriculum modules and syllabi"
           style={{
             width: '100%',
             height: '36px',
@@ -136,11 +140,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Right Controls: Theme Toggle, Live Sync, Notifications, Faculty Pill */}
+      {/* Right Controls: Theme Toggle, Database Status, Notifications, Faculty Pill */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Live Sync Status Pill */}
+        {/* Real-time DB Status Pill (Accurately reflects un-connected state) */}
         <div
           className="navbar-status-pill"
+          title="Firebase Firestore connection is pending"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -160,11 +165,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               width: '7px',
               height: '7px',
               borderRadius: '9999px',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 6px #10b981',
+              backgroundColor: '#f59e0b',
+              boxShadow: '0 0 6px #f59e0b',
             }}
           />
-          <span>REAL-TIME DB</span>
+          <Database size={11} />
+          <span>DB: STANDBY</span>
         </div>
 
         {/* Theme Toggle */}
@@ -174,7 +180,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           type="button"
           title="Instructor Notifications"
-          aria-label="Notifications"
+          aria-label="Notifications (No unread messages)"
+          className="interactive-scale"
           style={{
             position: 'relative',
             display: 'flex',
@@ -190,26 +197,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           }}
         >
           <Bell size={16} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '-3px',
-              right: '-3px',
-              width: '14px',
-              height: '14px',
-              borderRadius: '9999px',
-              backgroundColor: 'var(--error)',
-              color: '#ffffff',
-              fontSize: '9px',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            3
-          </span>
         </button>
 
         {/* Instructor Profile Pill */}
@@ -268,6 +255,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onSignOut}
             title="Sign out of Faculty Portal"
+            aria-label="Sign out"
+            className="interactive-scale"
             style={{
               background: 'transparent',
               border: 'none',

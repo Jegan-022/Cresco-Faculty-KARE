@@ -29,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectView,
   user,
 }) => {
+  // Navigation items without fabricated statistics
   const navItems: {
     index: string;
     label: FacultyViewType;
@@ -36,10 +37,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badge?: string;
   }[] = [
     { index: '01', label: 'Dashboard', icon: LayoutDashboard },
-    { index: '02', label: 'Students', icon: Users, badge: '452' },
+    { index: '02', label: 'Students', icon: Users },
     { index: '03', label: 'Courses', icon: BookOpen, badge: 'CS-4200' },
     { index: '04', label: 'Learning Levels', icon: Layers },
-    { index: '05', label: 'Analytics', icon: BarChart3, badge: 'LIVE' },
+    { index: '05', label: 'Analytics', icon: BarChart3 },
     { index: '06', label: 'Settings', icon: Settings },
   ];
 
@@ -59,10 +60,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           WebkitBackdropFilter: 'blur(3px)',
           animation: 'fadeIn 200ms ease-out',
         }}
+        aria-hidden="true"
       />
 
       {/* Floating Glassmorphic Drawer Body (Rounded-3xl, 24px radius) */}
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Faculty Navigation Drawer"
         style={{
           position: 'fixed',
           top: '12px',
@@ -101,7 +106,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close Drawer"
+              aria-label="Close Navigation Drawer"
+              className="interactive-scale"
               style={{
                 width: '32px',
                 height: '32px',
@@ -120,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Navigation Items */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <nav aria-label="Main menu" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {navItems.map((item) => {
               const isActive = activeView === item.label;
               const IconComp = item.icon;
@@ -133,6 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onSelectView(item.label);
                     onClose();
                   }}
+                  className="interactive-scale"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -259,6 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               href="https://cresco-cn-kare.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
+              className="interactive-scale"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -305,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               color: 'var(--text-muted)',
             }}
           >
-            Instructor: {user.name} ({user.staffId})
+            Faculty Console: {user.name} ({user.staffId})
           </div>
         </div>
       </aside>

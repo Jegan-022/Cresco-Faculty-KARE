@@ -64,14 +64,14 @@ export const App: React.FC = () => {
             type="button"
             onClick={() =>
               handleLoginSuccess({
-                id: 'KARE-FAC-0142',
-                name: 'Dr. K. Ramesh',
-                email: 'dr.ramesh@klu.ac.in',
+                id: 'FAC-COORD-4200',
+                name: 'Course Coordinator',
+                email: 'coordinator.cs4200@klu.ac.in',
                 department: 'Computer Science & Engineering',
-                designation: 'Professor & Coordinator',
+                designation: 'Professor & Chair',
                 institution: 'Kalasalingam Academy of Research and Education',
                 role: 'Course Coordinator',
-                staffId: 'KARE-FAC-0142',
+                staffId: 'FAC-COORD-4200',
               })
             }
             style={{
