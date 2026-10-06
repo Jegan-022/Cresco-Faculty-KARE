@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -17,31 +18,31 @@ import { BrandLogo } from './BrandLogo';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeView: FacultyViewType;
-  onSelectView: (view: FacultyViewType) => void;
   user: FacultyUser;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
-  activeView,
-  onSelectView,
   user,
 }) => {
-  // Navigation items without fabricated statistics
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Navigation items with routes
   const navItems: {
     index: string;
     label: FacultyViewType;
+    path: string;
     icon: React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
     badge?: string;
   }[] = [
-    { index: '01', label: 'Dashboard', icon: LayoutDashboard },
-    { index: '02', label: 'Students', icon: Users },
-    { index: '03', label: 'Courses', icon: BookOpen, badge: 'CS-4200' },
-    { index: '04', label: 'Learning Levels', icon: Layers },
-    { index: '05', label: 'Analytics', icon: BarChart3 },
-    { index: '06', label: 'Settings', icon: Settings },
+    { index: '01', label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { index: '02', label: 'Students', path: '/students', icon: Users },
+    { index: '03', label: 'Courses', path: '/courses', icon: BookOpen, badge: 'CS-4200' },
+    { index: '04', label: 'Learning Levels', path: '/learning-levels', icon: Layers },
+    { index: '05', label: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { index: '06', label: 'Settings', path: '/settings', icon: Settings },
   ];
 
   if (!isOpen) return null;
@@ -128,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Navigation Items */}
           <nav aria-label="Main menu" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {navItems.map((item) => {
-              const isActive = activeView === item.label;
+              const isActive = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
               const IconComp = item.icon;
 
               return (
@@ -136,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={item.label}
                   type="button"
                   onClick={() => {
-                    onSelectView(item.label);
+                    navigate(item.path);
                     onClose();
                   }}
                   className="interactive-scale"

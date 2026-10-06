@@ -19,20 +19,37 @@ import type { FacultyUser, FacultyViewType } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { SkeletonCard } from '../components/SkeletonLoader';
 
+import { useNavigate } from 'react-router-dom';
+
 interface FacultyDashboardShellProps {
   user: FacultyUser;
-  activeView: FacultyViewType;
-  onSelectView: (view: FacultyViewType) => void;
-  onSwitchToLogin: () => void;
+  activeView?: FacultyViewType;
+  onSelectView?: (view: FacultyViewType) => void;
+  onSwitchToLogin?: () => void;
 }
 
 export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
   user,
-  activeView,
+  activeView = 'Dashboard',
   onSelectView,
   onSwitchToLogin,
 }) => {
+  const navigate = useNavigate();
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
+
+  const tabPaths: Record<FacultyViewType, string> = {
+    Dashboard: '/dashboard',
+    Students: '/students',
+    Courses: '/courses',
+    'Learning Levels': '/learning-levels',
+    Analytics: '/analytics',
+    Settings: '/settings',
+  };
+
+  const handleTabClick = (tab: FacultyViewType) => {
+    if (onSelectView) onSelectView(tab);
+    navigate(tabPaths[tab]);
+  };
 
   // Production-grade metric cards adhering to strict DATA RULE (no fabricated counts)
   const metrics = [
@@ -117,7 +134,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               <button
                 key={tab}
                 type="button"
-                onClick={() => onSelectView(tab)}
+                onClick={() => handleTabClick(tab)}
                 className="interactive-scale"
                 style={{
                   padding: '8px 16px',
@@ -150,7 +167,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
           </button>
           <button
             type="button"
-            onClick={onSwitchToLogin}
+            onClick={onSwitchToLogin || (() => navigate('/login'))}
             className="btn-outline interactive-scale"
             style={{ fontSize: '12px', padding: '7px 14px' }}
           >
@@ -258,7 +275,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => onSelectView('Learning Levels')}
+                  onClick={() => handleTabClick('Learning Levels')}
                   className="btn-tactile-primary interactive-scale"
                   style={{
                     backgroundColor: '#ffffff',
@@ -274,7 +291,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onSelectView('Students')}
+                  onClick={() => handleTabClick('Students')}
                   className="btn-outline interactive-scale"
                   style={{
                     color: '#ffffff',
@@ -469,7 +486,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
 
               <button
                 type="button"
-                onClick={() => onSelectView('Learning Levels')}
+                onClick={() => handleTabClick('Learning Levels')}
                 className="btn-outline interactive-scale"
                 style={{ fontSize: '12px', padding: '6px 12px' }}
               >
@@ -640,7 +657,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
 
             <button
               type="button"
-              onClick={() => onSelectView('Settings')}
+              onClick={() => handleTabClick('Settings')}
               className="btn-outline interactive-scale"
               style={{ width: '100%', fontSize: '12.5px' }}
             >
