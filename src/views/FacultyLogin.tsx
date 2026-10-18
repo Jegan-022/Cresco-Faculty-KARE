@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School, Radio } from 'lucide-react';
 import { LiquidLinesCanvas } from '../components/LiquidLinesCanvas';
 import { BrandLogo } from '../components/BrandLogo';
+import { useFacultyAuth } from '../context/FacultyAuthContext';
 import type { FacultyUser } from '../types';
 
 interface FacultyLoginProps {
-  onLoginSuccess: (user: FacultyUser) => void;
+  onLoginSuccess?: (user: FacultyUser) => void;
   onExploreStudentPortal?: () => void;
 }
 
@@ -13,6 +14,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   onLoginSuccess,
   onExploreStudentPortal,
 }) => {
+  const { signIn } = useFacultyAuth();
   const [email, setEmail] = useState('coordinator.cs4200@klu.ac.in');
   const [password, setPassword] = useState('cresco@kare2026');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +22,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Staging Demo Accounts (clearly labelled as local staging access without fake metrics)
+  // Staging Demo Accounts (clearly labelled as institutional credentials awaiting Gate 4 claim)
   const stagingPresets = [
     {
       title: 'Course Coordinator',
@@ -46,7 +48,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
     setErrorMessage('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setErrorMessage('Please enter your institutional faculty email or Staff ID.');
@@ -60,33 +62,20 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
     setIsLoading(true);
     setErrorMessage('');
 
-    setTimeout(() => {
+    try {
+      const res = await signIn(email.trim(), password);
       setIsLoading(false);
-      const matched = stagingPresets.find((a) => a.email.toLowerCase() === email.toLowerCase());
-      const loggedUser: FacultyUser = matched
-        ? {
-            id: matched.staffId,
-            name: matched.title === 'Course Coordinator' ? 'Course Coordinator' : 'Lab Instructor',
-            email: matched.email,
-            department: matched.department,
-            designation: matched.designation,
-            institution: 'Kalasalingam Academy of Research and Education',
-            role: matched.role,
-            staffId: matched.staffId,
-          }
-        : {
-            id: 'FAC-AUTH-CUSTOM',
-            name: 'Faculty Member',
-            email: email,
-            department: 'Computer Science & Engineering',
-            designation: 'Faculty Instructor',
-            institution: 'Kalasalingam Academy of Research and Education',
-            role: 'Course Coordinator',
-            staffId: 'FAC-AUTH-4200',
-          };
-
-      onLoginSuccess(loggedUser);
-    }, 400);
+      if (res.success) {
+        if (onLoginSuccess) {
+          // Will navigate to /dashboard
+        }
+      } else {
+        setErrorMessage(res.error || 'Authentication rejected: Missing verified faculty authority.');
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      setErrorMessage(err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (

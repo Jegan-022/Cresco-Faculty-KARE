@@ -7,9 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "npx tsx test_faculty_integration.ts && npx tsx test_step27_production_readiness.ts && npx tsx test_step28_final_validation.ts",
+    "test:step27": "npx tsx test_step27_production_readiness.ts",
+    "test:step28": "npx tsx test_step28_final_validation.ts",
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^12.18.0",
     "lucide-react": "^1.52.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

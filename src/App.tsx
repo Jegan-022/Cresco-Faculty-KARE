@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { FacultyLogin } from './views/FacultyLogin';
-import { FacultyDashboardShell } from './views/FacultyDashboardShell';
-import { FacultyModuleViews } from './views/FacultyModuleViews';
+import { FacultyAuthProvider, useFacultyAuth, FacultyProtectedRoute, FacultyLoadingView } from './context/FacultyAuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import type { FacultyUser } from './types';
-import { LayoutDashboard, LogIn } from 'lucide-react';
+import type { FacultyUser, FacultyViewType } from './types';
+import { LogIn } from 'lucide-react';
 
-// Default staging session user for seamless deep-linking & direct route refreshes
-const DEFAULT_FACULTY_USER: FacultyUser = {
-  id: 'FAC-COORD-4200',
-  name: 'Course Coordinator',
-  email: 'coordinator.cs4200@klu.ac.in',
-  department: 'Computer Science & Engineering',
-  designation: 'Professor & Chair',
-  institution: 'Kalasalingam Academy of Research and Education',
-  role: 'Course Coordinator',
-  staffId: 'FAC-COORD-4200',
-};
+// Lazy-Loaded Views for optimized initial bundle footprint & instantaneous load
+const FacultyLogin = React.lazy(() => import('./views/FacultyLogin').then(m => ({ default: m.FacultyLogin })));
+const FacultyDashboardShell = React.lazy(() => import('./views/FacultyDashboardShell').then(m => ({ default: m.FacultyDashboardShell })));
+const FacultyModuleViews = React.lazy(() => import('./views/FacultyModuleViews').then(m => ({ default: m.FacultyModuleViews })));
 
 // Main Layout Shell for authenticated and deep-linked routes
 interface ShellLayoutProps {
@@ -59,9 +51,13 @@ const ShellLayout: React.FC<ShellLayoutProps> = ({ currentUser, onSignOut, child
         user={currentUser}
       />
 
-      {/* 3. Main Views */}
+      {/* 3. Main Views wrapped in ErrorBoundary */}
       <main style={{ flex: 1, paddingTop: '16px' }} role="main">
-        {children}
+        <ErrorBoundary fallbackTitle="Faculty Workspace Exception">
+          <Suspense fallback={<FacultyLoadingView />}>
+            {children}
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Quick Return to Login Dock button */}
@@ -95,54 +91,39 @@ const ShellLayout: React.FC<ShellLayoutProps> = ({ currentUser, onSignOut, child
 
 // Internal router component with session handling
 const AppRoutes: React.FC = () => {
+  const { user, authInfo, signOut } = useFacultyAuth();
   const navigate = useNavigate();
 
-  // Restore session from localStorage or use default staging session
-  const [currentUser, setCurrentUser] = useState<FacultyUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cresco_faculty_session');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          // Fall through
-        }
-      }
-      // If directly refreshing a dashboard route, maintain coordinator session
-      if (['/dashboard', '/students', '/courses', '/learning-levels', '/analytics', '/settings'].includes(window.location.pathname)) {
-        return DEFAULT_FACULTY_USER;
-      }
+  const handleNavigate = (v: FacultyViewType) => {
+    switch (v) {
+      case 'Dashboard': navigate('/dashboard'); break;
+      case 'Students': navigate('/students'); break;
+      case 'Courses': navigate('/courses'); break;
+      case 'Learning Levels': navigate('/learning-levels'); break;
+      case 'Assessment Review': navigate('/assessment-review'); break;
+      case 'Live Classroom': navigate('/live-classroom'); break;
+      case 'Analytics': navigate('/analytics'); break;
+      case 'Settings': navigate('/settings'); break;
     }
-    return null;
-  });
-
-  // Save session state to localStorage
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('cresco_faculty_session', JSON.stringify(currentUser));
-    }
-  }, [currentUser]);
-
-  const handleLoginSuccess = (user: FacultyUser) => {
-    setCurrentUser(user);
-    localStorage.setItem('cresco_faculty_session', JSON.stringify(user));
-    navigate('/dashboard');
   };
 
-  const handleSignOut = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('cresco_faculty_session');
-    navigate('/login');
+  const activeUser = user || {
+    id: 'FAC-STANDBY',
+    name: 'Faculty Instructor',
+    email: 'faculty@klu.ac.in',
+    department: 'Computer Science & Engineering',
+    designation: 'Faculty Member',
+    institution: 'KARE',
+    role: 'Course Coordinator',
+    staffId: 'FAC-STANDBY'
   };
-
-  const activeUser = currentUser || DEFAULT_FACULTY_USER;
 
   return (
     <Routes>
       {/* Route: / -> redirects to /dashboard if logged in, else /login */}
       <Route
         path="/"
-        element={currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}
+        element={user && authInfo?.isAuthorized ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}
       />
 
       {/* Route: /login */}
@@ -150,63 +131,12 @@ const AppRoutes: React.FC = () => {
         path="/login"
         element={
           <div style={{ position: 'relative', minHeight: '100vh', width: '100%' }}>
-            <FacultyLogin
-              onLoginSuccess={handleLoginSuccess}
-              onExploreStudentPortal={() => window.open('https://cresco-cn-kare.vercel.app/', '_blank')}
-            />
-
-            {/* Quick Reviewer Toolbar: Allows rapid direct opening of Dashboard */}
-            <aside
-              style={{
-                position: 'fixed',
-                bottom: '16px',
-                right: '16px',
-                zIndex: 50,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 12px',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(12px)',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
-                  color: '#38bdf8',
-                  fontWeight: 700,
-                }}
-              >
-                FACULTY PREVIEW:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleLoginSuccess(DEFAULT_FACULTY_USER)}
-                className="interactive-scale"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '4px 10px',
-                  borderRadius: '9999px',
-                  backgroundColor: '#059669',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-headline)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 0 0 #047857',
-                }}
-              >
-                <LayoutDashboard size={12} />
-                <span>Open Dashboard Shell</span>
-              </button>
-            </aside>
+            <Suspense fallback={<FacultyLoadingView />}>
+              <FacultyLogin
+                onLoginSuccess={() => navigate('/dashboard')}
+                onExploreStudentPortal={() => window.open('https://cresco-cn-kare.vercel.app/', '_blank')}
+              />
+            </Suspense>
           </div>
         }
       />
@@ -215,13 +145,16 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/dashboard"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyDashboardShell
-              user={activeUser}
-              activeView="Dashboard"
-              onSwitchToLogin={() => navigate('/login')}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyDashboardShell
+                user={activeUser}
+                activeView="Dashboard"
+                onSelectView={handleNavigate}
+                onSwitchToLogin={() => navigate('/login')}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -229,19 +162,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/students"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyModuleViews
-              activeView="Students"
-              user={activeUser}
-              onNavigate={(v) => {
-                if (v === 'Dashboard') navigate('/dashboard');
-                else if (v === 'Courses') navigate('/courses');
-                else if (v === 'Learning Levels') navigate('/learning-levels');
-                else if (v === 'Analytics') navigate('/analytics');
-                else if (v === 'Settings') navigate('/settings');
-              }}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Students"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -249,19 +178,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/courses"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyModuleViews
-              activeView="Courses"
-              user={activeUser}
-              onNavigate={(v) => {
-                if (v === 'Dashboard') navigate('/dashboard');
-                else if (v === 'Students') navigate('/students');
-                else if (v === 'Learning Levels') navigate('/learning-levels');
-                else if (v === 'Analytics') navigate('/analytics');
-                else if (v === 'Settings') navigate('/settings');
-              }}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Courses"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -269,19 +194,47 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/learning-levels"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyModuleViews
-              activeView="Learning Levels"
-              user={activeUser}
-              onNavigate={(v) => {
-                if (v === 'Dashboard') navigate('/dashboard');
-                else if (v === 'Students') navigate('/students');
-                else if (v === 'Courses') navigate('/courses');
-                else if (v === 'Analytics') navigate('/analytics');
-                else if (v === 'Settings') navigate('/settings');
-              }}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Learning Levels"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
+        }
+      />
+
+      {/* Route: /assessment-review */}
+      <Route
+        path="/assessment-review"
+        element={
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Assessment Review"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
+        }
+      />
+
+      {/* Route: /live-classroom */}
+      <Route
+        path="/live-classroom"
+        element={
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Live Classroom"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -289,19 +242,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/analytics"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyModuleViews
-              activeView="Analytics"
-              user={activeUser}
-              onNavigate={(v) => {
-                if (v === 'Dashboard') navigate('/dashboard');
-                else if (v === 'Students') navigate('/students');
-                else if (v === 'Courses') navigate('/courses');
-                else if (v === 'Learning Levels') navigate('/learning-levels');
-                else if (v === 'Settings') navigate('/settings');
-              }}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Analytics"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -309,19 +258,15 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/settings"
         element={
-          <ShellLayout currentUser={activeUser} onSignOut={handleSignOut}>
-            <FacultyModuleViews
-              activeView="Settings"
-              user={activeUser}
-              onNavigate={(v) => {
-                if (v === 'Dashboard') navigate('/dashboard');
-                else if (v === 'Students') navigate('/students');
-                else if (v === 'Courses') navigate('/courses');
-                else if (v === 'Learning Levels') navigate('/learning-levels');
-                else if (v === 'Analytics') navigate('/analytics');
-              }}
-            />
-          </ShellLayout>
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="Settings"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
         }
       />
 
@@ -334,7 +279,11 @@ const AppRoutes: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <FacultyAuthProvider>
+        <ErrorBoundary fallbackTitle="Faculty Portal Runtime Exception">
+          <AppRoutes />
+        </ErrorBoundary>
+      </FacultyAuthProvider>
     </BrowserRouter>
   );
 };

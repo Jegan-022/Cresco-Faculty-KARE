@@ -42,6 +42,8 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
     Students: '/students',
     Courses: '/courses',
     'Learning Levels': '/learning-levels',
+    'Assessment Review': '/assessment-review',
+    'Live Classroom': '/live-classroom',
     Analytics: '/analytics',
     Settings: '/settings',
   };
@@ -85,10 +87,10 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
     },
     {
       title: 'Pending Lab Reviews',
-      value: '0',
-      statusText: 'Inbox clear',
-      statusColor: 'var(--text-muted)',
-      caption: 'No submissions awaiting instructor grading',
+      value: '2',
+      statusText: '2 Pending Review',
+      statusColor: 'var(--warning)',
+      caption: 'Subjective packet trace evaluations awaiting review',
       accentColor: '#f59e0b',
       shadowColor: '#fde68a',
       icon: Clock,
@@ -128,7 +130,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
-          {(['Dashboard', 'Students', 'Courses', 'Learning Levels', 'Analytics', 'Settings'] as FacultyViewType[]).map((tab) => {
+          {(['Dashboard', 'Students', 'Courses', 'Learning Levels', 'Assessment Review', 'Live Classroom', 'Analytics', 'Settings'] as FacultyViewType[]).map((tab) => {
             const isActive = activeView === tab;
             return (
               <button

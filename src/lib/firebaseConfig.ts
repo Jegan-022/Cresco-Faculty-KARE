@@ -1,0 +1,15 @@
+// CRESCO Production — Firebase Configuration for Faculty Portal
+// Connects to the authoritative 'cresco-cn' Google Cloud Firebase project
+
+export const firebaseConfig = {
+  projectId: 'cresco-cn',
+  appId: '1:843600800160:web:03b40ea6ef2935647e9cc5',
+  apiKey: 'AIzaSyBi09IyrnH2cGsRN09c0LxV083ydWq76cU',
+  authDomain: 'cresco-cn.firebaseapp.com',
+  firestoreDatabaseId: '(default)',
+  storageBucket: 'cresco-cn.firebasestorage.app',
+  messagingSenderId: '843600800160',
+  measurementId: 'G-BGZFM4EVSF'
+};
+
+export default firebaseConfig;

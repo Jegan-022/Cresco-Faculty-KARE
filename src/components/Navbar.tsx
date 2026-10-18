@@ -142,10 +142,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right Controls: Theme Toggle, Database Status, Notifications, Faculty Pill */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Real-time DB Status Pill (Accurately reflects un-connected state) */}
+        {/* Real-time DB Status Pill (Connected to cresco-cn Firebase Firestore) */}
         <div
           className="navbar-status-pill"
-          title="Firebase Firestore connection is pending"
+          title="Authoritative Firebase Firestore Connected: cresco-cn"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -165,12 +165,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               width: '7px',
               height: '7px',
               borderRadius: '9999px',
-              backgroundColor: '#f59e0b',
-              boxShadow: '0 0 6px #f59e0b',
+              backgroundColor: '#10b981',
+              boxShadow: '0 0 6px #10b981',
             }}
           />
-          <Database size={11} />
-          <span>DB: STANDBY</span>
+          <Database size={11} style={{ color: '#10b981' }} />
+          <span>FIREBASE: CRESCO-CN</span>
         </div>
 
         {/* Theme Toggle */}

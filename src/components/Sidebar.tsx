@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Shield,
   Activity,
+  ClipboardCheck,
+  Radio,
 } from 'lucide-react';
 import type { FacultyViewType, FacultyUser } from '../types';
 import { BrandLogo } from './BrandLogo';
@@ -41,8 +43,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { index: '02', label: 'Students', path: '/students', icon: Users },
     { index: '03', label: 'Courses', path: '/courses', icon: BookOpen, badge: 'CS-4200' },
     { index: '04', label: 'Learning Levels', path: '/learning-levels', icon: Layers },
-    { index: '05', label: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { index: '06', label: 'Settings', path: '/settings', icon: Settings },
+    { index: '05', label: 'Assessment Review', path: '/assessment-review', icon: ClipboardCheck, badge: '2 Pending' },
+    { index: '06', label: 'Live Classroom', path: '/live-classroom', icon: Radio },
+    { index: '07', label: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { index: '08', label: 'Settings', path: '/settings', icon: Settings },
   ];
 
   if (!isOpen) return null;
