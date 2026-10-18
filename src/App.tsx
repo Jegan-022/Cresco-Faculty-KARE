@@ -11,6 +11,9 @@ import { LogIn } from 'lucide-react';
 const FacultyLogin = React.lazy(() => import('./views/FacultyLogin').then(m => ({ default: m.FacultyLogin })));
 const FacultyDashboardShell = React.lazy(() => import('./views/FacultyDashboardShell').then(m => ({ default: m.FacultyDashboardShell })));
 const FacultyModuleViews = React.lazy(() => import('./views/FacultyModuleViews').then(m => ({ default: m.FacultyModuleViews })));
+const AdminPortalView = React.lazy(() => import('./views/AdminPortalView').then(m => ({ default: m.AdminPortalView })));
+const TermsView = React.lazy(() => import('./views/TermsView').then(m => ({ default: m.TermsView })));
+const PrivacyView = React.lazy(() => import('./views/PrivacyView').then(m => ({ default: m.PrivacyView })));
 
 // Main Layout Shell for authenticated and deep-linked routes
 interface ShellLayoutProps {
@@ -104,6 +107,7 @@ const AppRoutes: React.FC = () => {
       case 'Live Classroom': navigate('/live-classroom'); break;
       case 'Analytics': navigate('/analytics'); break;
       case 'Settings': navigate('/settings'); break;
+      case 'Admin Portal': navigate('/admin'); break;
     }
   };
 
@@ -271,6 +275,40 @@ const AppRoutes: React.FC = () => {
               />
             </ShellLayout>
           </FacultyProtectedRoute>
+        }
+      />
+
+      {/* Route: /admin (Administrator Portal) */}
+      <Route
+        path="/admin"
+        element={
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <Suspense fallback={<FacultyLoadingView />}>
+                <AdminPortalView />
+              </Suspense>
+            </ShellLayout>
+          </FacultyProtectedRoute>
+        }
+      />
+
+      {/* Route: /terms (Institutional Terms & Conditions) */}
+      <Route
+        path="/terms"
+        element={
+          <Suspense fallback={<FacultyLoadingView />}>
+            <TermsView />
+          </Suspense>
+        }
+      />
+
+      {/* Route: /privacy (Student Data Privacy Policy) */}
+      <Route
+        path="/privacy"
+        element={
+          <Suspense fallback={<FacultyLoadingView />}>
+            <PrivacyView />
+          </Suspense>
         }
       />
 

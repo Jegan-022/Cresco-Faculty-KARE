@@ -46,6 +46,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
     'Live Classroom': '/live-classroom',
     Analytics: '/analytics',
     Settings: '/settings',
+    'Admin Portal': '/admin',
   };
 
   const handleTabClick = (tab: FacultyViewType) => {

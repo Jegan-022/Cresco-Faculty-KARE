@@ -47,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { index: '06', label: 'Live Classroom', path: '/live-classroom', icon: Radio },
     { index: '07', label: 'Analytics', path: '/analytics', icon: BarChart3 },
     { index: '08', label: 'Settings', path: '/settings', icon: Settings },
+    { index: '09', label: 'Admin Portal', path: '/admin', icon: Shield, badge: 'Cross-App' },
   ];
 
   if (!isOpen) return null;

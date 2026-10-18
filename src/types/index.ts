@@ -6,7 +6,8 @@ export type FacultyViewType =
   | 'Assessment Review'
   | 'Live Classroom'
   | 'Analytics' 
-  | 'Settings';
+  | 'Settings'
+  | 'Admin Portal';
 
 export interface FacultyUser {
   id: string; // Firebase Auth UID or institutional staffId

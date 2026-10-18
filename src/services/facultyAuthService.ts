@@ -15,6 +15,10 @@ import {
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut, 
   onIdTokenChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  sendPasswordResetEmail,
   type User,
   type IdTokenResult
 } from 'firebase/auth';
@@ -182,6 +186,53 @@ export async function signInFacultyWithCredentials(
     }
     throw err;
   }
+}
+
+/**
+ * Authenticates against Firebase Auth using institutional Google Workspace SSO.
+ */
+export async function signInFacultyWithGoogle(): Promise<{ user: FacultyUser | null; authInfo: FacultyAuthorizationInfo }> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  let credUser: User;
+  try {
+    const cred = await signInWithPopup(auth, provider);
+    credUser = cred.user;
+  } catch (popupErr: any) {
+    if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/internal-error') {
+      await signInWithRedirect(auth, provider);
+      return { 
+        user: null, 
+        authInfo: { 
+          isAuthorized: false, 
+          role: null, 
+          hasFacultyClaim: false, 
+          claims: {},
+          rejectionReason: 'Redirecting to Google sign-in...'
+        } 
+      };
+    }
+    throw popupErr;
+  }
+
+  const authInfo = await verifyUserFacultyAuthorization(credUser);
+  if (!authInfo.isAuthorized) {
+    return { user: null, authInfo };
+  }
+
+  const facultyUser = buildFacultyUser(credUser, authInfo);
+  return { user: facultyUser, authInfo };
+}
+
+/**
+ * Sends official Firebase password reset email to registered faculty address.
+ */
+export async function resetFacultyPassword(email: string): Promise<void> {
+  const trimmed = email.trim();
+  if (!trimmed || !trimmed.includes('@')) {
+    throw new Error('Please enter a valid institutional faculty email address.');
+  }
+  await sendPasswordResetEmail(auth, trimmed);
 }
 
 /**

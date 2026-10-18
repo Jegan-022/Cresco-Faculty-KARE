@@ -16,6 +16,8 @@ import {
   subscribeToFacultyAuth, 
   signInFacultyWithCredentials, 
   signOutFaculty,
+  signInFacultyWithGoogle,
+  resetFacultyPassword,
   INSTITUTIONAL_IT_DEPENDENCY 
 } from '../services/facultyAuthService';
 import type { FacultyUser, FacultyAuthorizationInfo } from '../types';
@@ -27,6 +29,8 @@ interface FacultyAuthContextType {
   authInfo: FacultyAuthorizationInfo | null;
   isLoading: boolean;
   signIn: (email: string, pass: string) => Promise<{ success: boolean; user?: FacultyUser | null; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; user?: FacultyUser | null; error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -69,6 +73,38 @@ export const FacultyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  const signInWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const result = await signInFacultyWithGoogle();
+      setUser(result.user);
+      setAuthInfo(result.authInfo);
+      setIsLoading(false);
+      if (result.user && result.authInfo.isAuthorized) {
+        return { success: true, user: result.user };
+      } else {
+        return {
+          success: false,
+          error: result.authInfo.rejectionReason || 'Google account lacks verified faculty authority.'
+        };
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, error: msg };
+    }
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    try {
+      await resetFacultyPassword(email);
+      return { success: true };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, error: msg };
+    }
+  };
+
   const signOut = async () => {
     await signOutFaculty();
     setUser(null);
@@ -76,7 +112,7 @@ export const FacultyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   return (
-    <FacultyAuthContext.Provider value={{ user, authInfo, isLoading, signIn, signOut }}>
+    <FacultyAuthContext.Provider value={{ user, authInfo, isLoading, signIn, signInWithGoogle, sendPasswordReset, signOut }}>
       {children}
     </FacultyAuthContext.Provider>
   );

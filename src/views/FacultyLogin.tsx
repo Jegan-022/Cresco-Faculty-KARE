@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School, Radio } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School, Radio, X, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { LiquidLinesCanvas } from '../components/LiquidLinesCanvas';
 import { BrandLogo } from '../components/BrandLogo';
 import { useFacultyAuth } from '../context/FacultyAuthContext';
@@ -14,13 +15,20 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   onLoginSuccess,
   onExploreStudentPortal,
 }) => {
-  const { signIn } = useFacultyAuth();
+  const { signIn, signInWithGoogle, sendPasswordReset } = useFacultyAuth();
   const [email, setEmail] = useState('coordinator.cs4200@klu.ac.in');
   const [password, setPassword] = useState('cresco@kare2026');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Forgot password state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [forgotMessage, setForgotMessage] = useState('');
 
   // Staging Demo Accounts (clearly labelled as institutional credentials awaiting Gate 4 claim)
   const stagingPresets = [
@@ -80,6 +88,51 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       } else {
         setErrorMessage(msg);
       }
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setErrorMessage('');
+    try {
+      const res = await signInWithGoogle();
+      setIsGoogleLoading(false);
+      if (res.success && res.user) {
+        if (onLoginSuccess) {
+          onLoginSuccess(res.user);
+        }
+      } else {
+        setErrorMessage(res.error || 'Google sign-in completed, but this account lacks verified faculty authority.');
+      }
+    } catch (err: unknown) {
+      setIsGoogleLoading(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('auth/popup-closed-by-user')) {
+        setErrorMessage('Google sign-in popup closed by user.');
+      } else if (msg.includes('auth/cancelled-popup-request')) {
+        setErrorMessage('Popup sign-in was cancelled.');
+      } else {
+        setErrorMessage(msg);
+      }
+    }
+  };
+
+  const handleSendPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setForgotStatus('error');
+      setForgotMessage('Please enter your registered institutional email address.');
+      return;
+    }
+    setForgotStatus('loading');
+    setForgotMessage('');
+    const res = await sendPasswordReset(forgotEmail.trim());
+    if (res.success) {
+      setForgotStatus('success');
+      setForgotMessage('Password reset instructions sent. Please check your institutional inbox.');
+    } else {
+      setForgotStatus('error');
+      setForgotMessage(res.error || 'Unable to process password reset. Please check the email address or contact KARE IT.');
     }
   };
 
@@ -445,22 +498,27 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                       <Lock size={13} style={{ color: '#06b6d4' }} />
                       <span>Security Password</span>
                     </label>
-                    <a
-                      href="#forgot"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert('Password reset link will be sent to registered faculty email.');
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(email);
+                        setForgotStatus('idle');
+                        setForgotMessage('');
+                        setShowForgotModal(true);
                       }}
                       style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
                         fontSize: '11px',
                         color: '#38bdf8',
-                        textDecoration: 'none',
+                        cursor: 'pointer',
                         fontFamily: 'var(--font-body)',
                         fontWeight: 600,
                       }}
                     >
                       Forgot password?
-                    </a>
+                    </button>
                   </div>
 
                   <div style={{ position: 'relative' }}>
@@ -566,14 +624,14 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                 {/* Submit button with Tactile 3D affordance */}
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                   className="btn-tactile-sky interactive-scale"
                   style={{
                     width: '100%',
                     padding: '12px 18px',
                     fontSize: '13.5px',
                     marginTop: '8px',
-                    opacity: isLoading ? 0.8 : 1,
+                    opacity: (isLoading || isGoogleLoading) ? 0.8 : 1,
                     position: 'relative',
                   }}
                 >
@@ -594,12 +652,69 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                     </span>
                   ) : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      <span>Sign In to Faculty Portal</span>
+                      <span>Sign In with Password</span>
                       <ArrowRight size={15} />
                     </span>
                   )}
                 </button>
+
+                {/* OR Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0', gap: '10px' }}>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(51, 65, 85, 0.6)' }} />
+                  <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#64748b', fontWeight: 700 }}>OR</span>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(51, 65, 85, 0.6)' }} />
+                </div>
+
+                {/* Google Sign In Button */}
+                <button
+                  type="button"
+                  disabled={isLoading || isGoogleLoading}
+                  onClick={handleGoogleSignIn}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    padding: '11px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#f8fafc',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: (isLoading || isGoogleLoading) ? 'not-allowed' : 'pointer',
+                    transition: 'all 180ms ease',
+                    opacity: (isLoading || isGoogleLoading) ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoading && !isGoogleLoading) {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.35)';
+                      e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.9)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+                  }}
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  <span>{isGoogleLoading ? 'Connecting Google Account...' : 'Continue with Google'}</span>
+                </button>
               </form>
+
+              {/* Terms and Privacy Policy Links */}
+              <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '11px', color: '#64748b' }}>
+                <span>By continuing, you agree to CRESCO CN's </span>
+                <Link to="/terms" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</Link>
+                <span> and </span>
+                <Link to="/privacy" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</Link>.
+              </div>
             </div>
 
             {/* Institutional Security Notice */}
@@ -729,6 +844,198 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 4. Forgot Password Modal */}
+      {showForgotModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="forgot-password-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(3, 7, 18, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              backgroundColor: 'rgba(15, 23, 42, 0.96)',
+              border: '1px solid rgba(6, 182, 212, 0.35)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(6, 182, 212, 0.15)',
+              position: 'relative',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <h3
+                  id="forgot-password-title"
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 800,
+                    color: '#f8fafc',
+                    fontFamily: 'var(--font-headline)',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Reset Faculty Password
+                </h3>
+                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                  Enter your registered institutional email to receive official password reset instructions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                title="Close dialog"
+                aria-label="Close dialog"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#f8fafc')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Status alerts */}
+            {forgotStatus === 'success' && (
+              <div
+                role="status"
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  color: '#6ee7b7',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  fontSize: '12.5px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <CheckCircle2 size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+                <span>{forgotMessage}</span>
+              </div>
+            )}
+
+            {forgotStatus === 'error' && (
+              <div
+                role="alert"
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  color: '#fca5a5',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
+                  fontSize: '12px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>⚠️</span>
+                <span>{forgotMessage}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSendPasswordReset} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label
+                  htmlFor="reset-email-input"
+                  style={{
+                    display: 'block',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#cbd5e1',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Institutional Faculty Email
+                </label>
+                <input
+                  id="reset-email-input"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="e.g. coordinator.cs4200@klu.ac.in"
+                  className="input-mono"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    backgroundColor: 'rgba(11, 19, 34, 0.9)',
+                    border: '1px solid #334155',
+                    color: '#f8fafc',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#06b6d4')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#334155')}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #334155',
+                    color: '#cbd5e1',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotStatus === 'loading'}
+                  className="btn-tactile-sky"
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '10px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    cursor: forgotStatus === 'loading' ? 'not-allowed' : 'pointer',
+                    opacity: forgotStatus === 'loading' ? 0.7 : 1,
+                  }}
+                >
+                  {forgotStatus === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin {
