@@ -46,8 +46,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         }}
       >
         <img
-          src="/assets/mascot/cresco-mascot.png"
-          alt="Cresco CN Mascot Logo"
+          src="/cresco-teacher.png"
+          alt="Cresco Teacher Mascot"
           style={{
             width: '100%',
             height: '100%',
