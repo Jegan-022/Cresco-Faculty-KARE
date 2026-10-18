@@ -26,7 +26,7 @@ interface FacultyAuthContextType {
   user: FacultyUser | null;
   authInfo: FacultyAuthorizationInfo | null;
   isLoading: boolean;
-  signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, pass: string) => Promise<{ success: boolean; user?: FacultyUser | null; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -55,7 +55,7 @@ export const FacultyAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setAuthInfo(result.authInfo);
       setIsLoading(false);
       if (result.user && result.authInfo.isAuthorized) {
-        return { success: true };
+        return { success: true, user: result.user };
       } else {
         return { 
           success: false, 

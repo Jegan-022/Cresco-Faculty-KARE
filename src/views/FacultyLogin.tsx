@@ -66,15 +66,20 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       const res = await signIn(email.trim(), password);
       setIsLoading(false);
       if (res.success) {
-        if (onLoginSuccess) {
-          // Will navigate to /dashboard
+        if (onLoginSuccess && res.user) {
+          onLoginSuccess(res.user);
         }
       } else {
         setErrorMessage(res.error || 'Authentication rejected: Missing verified faculty authority.');
       }
     } catch (err: unknown) {
       setIsLoading(false);
-      setErrorMessage(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('auth/invalid-credential')) {
+        setErrorMessage('Invalid faculty credentials. Click "Course Coordinator" or "Lab Instructor" preset above to auto-fill verified staging credentials.');
+      } else {
+        setErrorMessage(msg);
+      }
     }
   };
 

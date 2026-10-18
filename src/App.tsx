@@ -130,14 +130,18 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/login"
         element={
-          <div style={{ position: 'relative', minHeight: '100vh', width: '100%' }}>
-            <Suspense fallback={<FacultyLoadingView />}>
-              <FacultyLogin
-                onLoginSuccess={() => navigate('/dashboard')}
-                onExploreStudentPortal={() => window.open('https://cresco-cn-kare.vercel.app/', '_blank')}
-              />
-            </Suspense>
-          </div>
+          user && authInfo?.isAuthorized ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <div style={{ position: 'relative', minHeight: '100vh', width: '100%' }}>
+              <Suspense fallback={<FacultyLoadingView />}>
+                <FacultyLogin
+                  onLoginSuccess={() => navigate('/dashboard')}
+                  onExploreStudentPortal={() => window.open('https://cresco-cn-kare.vercel.app/', '_blank')}
+                />
+              </Suspense>
+            </div>
+          )
         }
       />
 
