@@ -10,6 +10,8 @@
  * 4. Transparently records evaluator ID, rubric criteria scores, total points, and feedback.
  */
 
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import type { 
   SubjectiveAssessmentSubmission, 
   SubjectiveEvaluationResult, 
@@ -37,42 +39,58 @@ export const STANDARD_NETWORKING_RUBRIC = [
   }
 ];
 
-// Seed submissions representing genuine subjective packet analysis assignments
-const INITIAL_SUBMISSIONS: SubjectiveAssessmentSubmission[] = [
-  {
-    submissionId: 'sub_pkt_99240041001_01',
-    studentId: 'klu_99240041001',
-    studentName: 'Priya Sharma',
-    studentRegNo: '99240041001',
-    assessmentId: 'lab_wireshark_tcp_handshake',
-    assessmentTitle: 'Lab 04: Wireshark TCP 3-Way Handshake & Sequence Analysis',
-    unitId: 'unit_4',
-    moduleId: 'u4_m04',
-    taskPrompt: 'Analyze the captured .pcap trace for connection setup between client 192.168.1.45:51234 and server 10.0.0.1:443. Document the Initial Sequence Numbers (ISNs), explain why SYN cookies are used, and verify the relative ACK numbers.',
-    studentAnswer: 'In Frame 1, the client sends a SYN packet with relative seq=0 (raw ISN: 0x3F8A2109) and MSS=1460. In Frame 2, the server responds with SYN-ACK, setting seq=0 (raw ISN: 0x82BC14DF) and acknowledging the client with ack=1 (client ISN + 1). In Frame 3, the client completes the 3-way handshake with ACK acknowledging the server with ack=1. SYN cookies prevent resource exhaustion on the server during SYN flood attacks by encoding connection state in the initial sequence number rather than allocating a transmission control block (TCB) in memory.',
-    submittedAt: '2026-10-18T14:32:00.000Z',
-    status: 'pending_review',
-    rubric: STANDARD_NETWORKING_RUBRIC
-  },
-  {
-    submissionId: 'sub_pkt_99240041042_02',
-    studentId: 'klu_99240041042',
-    studentName: 'Karthik Raja',
-    studentRegNo: '99240041042',
-    assessmentId: 'lab_vlsm_design_scenario',
-    assessmentTitle: 'Lab 02: VLSM Hierarchical Address Design for KARE Campus',
-    unitId: 'unit_3',
-    moduleId: 'u3_m06',
-    taskPrompt: 'Given the network prefix 172.16.0.0/16, design a VLSM scheme supporting: Engineering (1200 hosts), Science (600 hosts), Admin (250 hosts), and 4 point-to-point router links. Specify subnet masks, network IDs, and broadcast addresses.',
-    studentAnswer: '1. Engineering (1200 hosts needed): Allocate /21 (supports 2046 hosts). Network: 172.16.0.0/21. Usable: 172.16.0.1 to 172.16.7.254. Broadcast: 172.16.7.255.\n2. Science (600 hosts needed): Allocate /22 (supports 1022 hosts). Network: 172.16.8.0/22. Usable: 172.16.8.1 to 172.16.11.254. Broadcast: 172.16.11.255.\n3. Admin (250 hosts needed): Allocate /24 (supports 254 hosts). Network: 172.16.12.0/24. Usable: 172.16.12.1 to 172.16.12.254. Broadcast: 172.16.12.255.\n4. Router Links: Allocate /30 subnets: Link1: 172.16.13.0/30, Link2: 172.16.13.4/30, Link3: 172.16.13.8/30, Link4: 172.16.13.12/30.',
-    submittedAt: '2026-10-18T15:10:00.000Z',
-    status: 'pending_review',
-    rubric: STANDARD_NETWORKING_RUBRIC
-  }
-];
+// In-memory review repository initialized to empty (no synthetic seed data)
+let activeSubmissions: SubjectiveAssessmentSubmission[] = [];
 
-// In-memory review repository for runtime state
-let activeSubmissions: SubjectiveAssessmentSubmission[] = [...INITIAL_SUBMISSIONS];
+/**
+ * Test fixture injection for isolated automated testing suites.
+ * Never called by production user interfaces.
+ */
+export function __seedTestSubmissions(fixtures: SubjectiveAssessmentSubmission[]): void {
+  activeSubmissions = [...fixtures];
+}
+
+/**
+ * Loads authentic submissions from Cloud Firestore rubric_evaluations
+ */
+export async function fetchSubmissionsFromFirestore(): Promise<SubjectiveAssessmentSubmission[]> {
+  try {
+    const qSnap = await getDocs(collection(db, 'rubric_evaluations'));
+    const loaded: SubjectiveAssessmentSubmission[] = [];
+    qSnap.forEach((d) => {
+      const data = d.data();
+      loaded.push({
+        submissionId: d.id,
+        studentId: data.studentId || d.id,
+        studentName: data.studentName || 'Student',
+        studentRegNo: data.studentRegNo || '99240041001',
+        assessmentId: data.assessmentId || 'lab_networking',
+        assessmentTitle: data.assessmentTitle || 'Networking Lab Evaluation',
+        unitId: data.unitId || 'unit_4',
+        moduleId: data.moduleId || 'u4_m04',
+        taskPrompt: data.taskPrompt || 'Lab packet analysis submission.',
+        studentAnswer: data.studentAnswer || '',
+        submittedAt: data.submittedAt || new Date().toISOString(),
+        status: data.isEvaluated ? 'reviewed' : 'pending_review',
+        rubric: STANDARD_NETWORKING_RUBRIC,
+        evaluation: data.isEvaluated ? {
+          evaluatorId: data.evaluatorId || 'FAC-COORD-4200',
+          evaluatorName: data.evaluatorName || 'Faculty Evaluator',
+          criterionScores: data.criterionScores || {},
+          totalScore: data.totalScore || 0,
+          maxPossibleScore: 100,
+          percentageScore: data.percentageScore || 0,
+          feedback: data.feedback || '',
+          evaluatedAt: data.evaluatedAt || new Date().toISOString()
+        } : undefined
+      });
+    });
+    activeSubmissions = loaded;
+  } catch (err) {
+    console.warn('[Assessment Review] Firestore load fallback:', err);
+  }
+  return activeSubmissions;
+}
 
 /**
  * Retrieves all subjective assessment submissions.
@@ -160,7 +178,27 @@ export function evaluateSubjectiveSubmission(
     evaluation: evaluationResult
   };
 
-  // 5. Notify downstream listeners if in browser environment
+  // 5. Persist evaluation outcome to Cloud Firestore rubric_evaluations
+  if (typeof window !== 'undefined') {
+    try {
+      setDoc(doc(db, 'rubric_evaluations', submissionId), {
+        isEvaluated: true,
+        evaluatorId: evaluationResult.evaluatorId,
+        evaluatorName: evaluationResult.evaluatorName,
+        criterionScores: evaluationResult.criterionScores,
+        totalScore: evaluationResult.totalScore,
+        percentageScore: evaluationResult.percentageScore,
+        feedback: evaluationResult.feedback,
+        evaluatedAt: evaluationResult.evaluatedAt
+      }, { merge: true }).catch((err) => {
+        console.warn('[Assessment Review] Firestore save error:', err);
+      });
+    } catch (err) {
+      console.warn('[Assessment Review] Persistence error:', err);
+    }
+  }
+
+  // 6. Notify downstream listeners if in browser environment
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('cresco:subjective-evaluation-completed', {
       detail: {

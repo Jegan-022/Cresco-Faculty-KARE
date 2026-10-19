@@ -14,11 +14,12 @@ import {
   Send,
   StopCircle,
   Award,
+  ClipboardCheck,
 } from 'lucide-react';
 import type { FacultyUser, FacultyViewType, SubjectiveAssessmentSubmission, LiveClassroomSessionState } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { SkeletonTable } from '../components/SkeletonLoader';
-import { getSubmissions, evaluateSubjectiveSubmission } from '../services/assessmentReviewService';
+import { getSubmissions, evaluateSubjectiveSubmission, fetchSubmissionsFromFirestore } from '../services/assessmentReviewService';
 import { 
   subscribeToLiveClassroom, 
   broadcastQuestion, 
@@ -59,6 +60,13 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
   const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
 
   useEffect(() => {
+    fetchSubmissionsFromFirestore().then((subs) => {
+      setSubmissions(subs);
+      if (subs.length > 0 && !selectedSubId) {
+        setSelectedSubId(subs[0].submissionId);
+      }
+    });
+
     const unsub = subscribeToLiveClassroom((updated) => {
       setLiveSession(updated);
     });
@@ -523,9 +531,20 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
         </div>
 
         {/* Review Queue & Detail Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '24px' }}>
-          {/* Left Column: Submissions Queue */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {submissions.length === 0 ? (
+          <div className="card-standard" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <ClipboardCheck size={44} style={{ margin: '0 auto 16px', opacity: 0.35, color: 'var(--primary)' }} />
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              No Subjective Submissions in Queue
+            </h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '440px', margin: '0 auto' }}>
+              There are currently no subjective packet analysis or network design assignments awaiting evaluation in Cloud Firestore <code>rubric_evaluations</code>.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '24px' }}>
+            {/* Left Column: Submissions Queue */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <h2 style={{ fontSize: '14px', fontFamily: 'var(--font-headline)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
               Submissions Queue
             </h2>
@@ -740,7 +759,8 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
             </div>
           )}
         </div>
-      </div>
+      )}
+    </div>
     );
   }
 

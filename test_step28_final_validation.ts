@@ -12,7 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { CANONICAL_MODULES, CS_4200_COURSE_INFO } from './src/data/canonicalCurriculum';
 import { evaluateFacultyClaims, INSTITUTIONAL_IT_DEPENDENCY } from './src/services/facultyAuthService';
-import { evaluateSubjectiveSubmission } from './src/services/assessmentReviewService';
+import { evaluateSubjectiveSubmission, __seedTestSubmissions, STANDARD_NETWORKING_RUBRIC } from './src/services/assessmentReviewService';
 import { INITIAL_INACTIVE_SESSION, SAMPLE_BROADCAST_QUESTIONS } from './src/services/liveClassroomService';
 import { firebaseConfig } from './src/lib/firebaseConfig';
 import type { FacultyUser } from './src/types';
@@ -138,6 +138,25 @@ async function runStep28Validation() {
     assignedSections: ['CS-4200-A'],
     permissions: ['grade_assessments', 'view_curriculum']
   };
+
+  // Seed isolated test fixture for automated testing validation
+  __seedTestSubmissions([
+    {
+      submissionId: 'sub_pkt_99240041001_01',
+      studentId: 'test_stu_01',
+      studentName: 'Priya Sharma (Test)',
+      studentRegNo: '99240041001',
+      assessmentId: 'lab_wireshark_tcp_handshake',
+      assessmentTitle: 'Lab 04: Wireshark TCP 3-Way Handshake & Sequence Analysis',
+      unitId: 'unit_4',
+      moduleId: 'u4_m04',
+      taskPrompt: 'Analyze the captured .pcap trace.',
+      studentAnswer: 'In Frame 1 SYN, in Frame 2 SYN-ACK, in Frame 3 ACK.',
+      submittedAt: new Date().toISOString(),
+      status: 'pending_review',
+      rubric: STANDARD_NETWORKING_RUBRIC
+    }
+  ]);
 
   const evalResult = evaluateSubjectiveSubmission(
     'sub_pkt_99240041001_01',

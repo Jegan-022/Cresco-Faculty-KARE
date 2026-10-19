@@ -15,7 +15,7 @@
 import { evaluateFacultyClaims, INSTITUTIONAL_IT_DEPENDENCY } from './src/services/facultyAuthService';
 import { CANONICAL_MODULES } from './src/data/canonicalCurriculum';
 import { getCourseInfo, getAllModules, getModuleById, updateModulePedagogy } from './src/services/curriculumService';
-import { getSubmissions, evaluateSubjectiveSubmission } from './src/services/assessmentReviewService';
+import { getSubmissions, evaluateSubjectiveSubmission, __seedTestSubmissions, STANDARD_NETWORKING_RUBRIC } from './src/services/assessmentReviewService';
 import { getStudentCohortProgress } from './src/services/studentOversightService';
 import { SAMPLE_BROADCAST_QUESTIONS, INITIAL_INACTIVE_SESSION } from './src/services/liveClassroomService';
 import type { FacultyUser } from './src/types';
@@ -151,6 +151,40 @@ async function runTestSuite() {
 
   // 4. SUBJECTIVE ASSESSMENT REVIEW & RUBRIC GRADING
   console.log('\n--- 4. Subjective Assessment Review & Rubric Grading ---');
+  // Seed isolated test fixtures for automated testing (kept strictly in test runtime)
+  __seedTestSubmissions([
+    {
+      submissionId: 'test_sub_pkt_01',
+      studentId: 'klu_test_01',
+      studentName: 'Priya Sharma (Test)',
+      studentRegNo: '99240041001',
+      assessmentId: 'lab_wireshark_tcp_handshake',
+      assessmentTitle: 'Lab 04: Wireshark TCP 3-Way Handshake & Sequence Analysis',
+      unitId: 'unit_4',
+      moduleId: 'u4_m04',
+      taskPrompt: 'Analyze trace for connection setup.',
+      studentAnswer: 'In Frame 1 SYN relative seq=0. In Frame 2 SYN-ACK seq=0 ack=1. In Frame 3 ACK ack=1.',
+      submittedAt: new Date().toISOString(),
+      status: 'pending_review',
+      rubric: STANDARD_NETWORKING_RUBRIC
+    },
+    {
+      submissionId: 'test_sub_pkt_02',
+      studentId: 'klu_test_02',
+      studentName: 'Karthik Raja (Test)',
+      studentRegNo: '99240041042',
+      assessmentId: 'lab_vlsm_design_scenario',
+      assessmentTitle: 'Lab 02: VLSM Hierarchical Address Design for KARE Campus',
+      unitId: 'unit_3',
+      moduleId: 'u3_m06',
+      taskPrompt: 'VLSM design.',
+      studentAnswer: 'Allocate /21 for Engineering, /22 for Science, /24 for Admin.',
+      submittedAt: new Date().toISOString(),
+      status: 'pending_review',
+      rubric: STANDARD_NETWORKING_RUBRIC
+    }
+  ]);
+
   const submissions = getSubmissions();
   assert(submissions.length >= 2, 'Subjective review queue contains active submissions');
 

@@ -115,6 +115,7 @@ export function isAuthorizedAdministrator(user: FacultyUser | null, claims: Reco
 export async function getAdminOverview(): Promise<AdminOverviewStats> {
   let enrolledCount = 0;
   let hasEvidence = false;
+  let facultyCount = 0;
 
   try {
     const lbRef = collection(db, 'public_leaderboard');
@@ -126,6 +127,14 @@ export async function getAdminOverview(): Promise<AdminOverviewStats> {
     console.warn('[Admin Service] Firestore public_leaderboard query fallback:', err);
   }
 
+  try {
+    const facRef = collection(db, 'faculty_profiles');
+    const facSnap = await getDocs(facRef);
+    facultyCount = facSnap.size;
+  } catch (err) {
+    console.warn('[Admin Service] Firestore faculty_profiles count fallback:', err);
+  }
+
   const submissions = getSubmissions();
   const pendingCount = submissions.filter(s => s.status === 'pending_review').length;
 
@@ -135,7 +144,7 @@ export async function getAdminOverview(): Promise<AdminOverviewStats> {
     totalLevels: CS_4200_COURSE_INFO.totalLevels, // 21
     totalModules: CANONICAL_MODULES.length, // 30
     enrolledStudentsCount: enrolledCount,
-    registeredFacultyCount: 2, // Course Coordinator & Lab Faculty
+    registeredFacultyCount: facultyCount,
     pendingAssessmentsCount: pendingCount,
     hasGenuineEvidence: hasEvidence,
     timestamp: new Date().toISOString()
@@ -178,24 +187,6 @@ export async function getAdminStudents(): Promise<AdminStudentRecord[]> {
     console.warn('[Admin Service] Students load fallback:', err);
   }
 
-  // Baseline seed preview if Firestore empty
-  if (records.length === 0) {
-    records.push({
-      id: 'stu_99240041001',
-      studentId: '99240041001',
-      name: 'Priya Sharma',
-      email: '99240041001@klu.ac.in',
-      department: 'Computer Science & Engineering',
-      year: '3rd Year (UG)',
-      totalXP: 450,
-      completedModulesCount: 6,
-      streak: 4,
-      status: 'active',
-      termsAccepted: true,
-      termsAcceptedAt: '2026-10-18T10:00:00.000Z'
-    });
-  }
-
   return records;
 }
 
@@ -203,42 +194,28 @@ export async function getAdminStudents(): Promise<AdminStudentRecord[]> {
  * Fetches Faculty accounts and their trusted custom claims status
  */
 export async function getAdminFacultyRoster(): Promise<AdminFacultyRecord[]> {
-  // Authoritative institutional faculty roster
-  return [
-    {
-      staffId: 'FAC-COORD-4200',
-      name: 'Dr. Ramesh Kumar',
-      email: 'coordinator.cs4200@klu.ac.in',
-      department: 'Computer Science & Engineering',
-      designation: 'Professor & Chair',
-      role: 'Course Coordinator',
-      hasServerClaim: true,
-      assignedSections: ['CS-4200-A', 'CS-4200-B'],
-      provisioningStatus: 'PROVISIONED'
-    },
-    {
-      staffId: 'FAC-LAB-4200',
-      name: 'Prof. Ananya Sundaram',
-      email: 'lab.faculty@klu.ac.in',
-      department: 'Computer Science & Engineering',
-      designation: 'Associate Professor',
-      role: 'Lab Faculty',
-      hasServerClaim: true,
-      assignedSections: ['CS-4200-A'],
-      provisioningStatus: 'PROVISIONED'
-    },
-    {
-      staffId: 'FAC-ADJUNCT-99',
-      name: 'Faculty Pending Provisioning',
-      email: 'adjunct.networks@klu.ac.in',
-      department: 'Computer Science & Engineering',
-      designation: 'Assistant Professor',
-      role: 'Instructor',
-      hasServerClaim: false,
-      assignedSections: ['CS-4200-C'],
-      provisioningStatus: 'AWAITING_GATE_4_LDAP_SYNC'
-    }
-  ];
+  const records: AdminFacultyRecord[] = [];
+  try {
+    const facRef = collection(db, 'faculty_profiles');
+    const snap = await getDocs(facRef);
+    snap.forEach((d) => {
+      const data = d.data();
+      records.push({
+        staffId: data.staffId || d.id,
+        name: data.name || 'Faculty Member',
+        email: data.email || `${d.id}@klu.ac.in`,
+        department: data.department || 'Computer Science & Engineering',
+        designation: data.designation || 'Assistant Professor',
+        role: data.role || 'Instructor',
+        hasServerClaim: Boolean(data.hasServerClaim),
+        assignedSections: Array.isArray(data.assignedSections) ? data.assignedSections : ['CS-4200-A'],
+        provisioningStatus: data.hasServerClaim ? 'PROVISIONED' : 'AWAITING_GATE_4_LDAP_SYNC'
+      });
+    });
+  } catch (err) {
+    console.warn('[Faculty Roster] Firestore query error:', err);
+  }
+  return records;
 }
 
 /**
