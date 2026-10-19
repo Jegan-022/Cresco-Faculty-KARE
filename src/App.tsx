@@ -106,6 +106,7 @@ const AppRoutes: React.FC = () => {
       case 'Assessment Review': navigate('/assessment-review'); break;
       case 'Live Classroom': navigate('/live-classroom'); break;
       case 'Analytics': navigate('/analytics'); break;
+      case 'UDL Studio': navigate('/udl'); break;
       case 'Settings': navigate('/settings'); break;
       case 'Admin Portal': navigate('/admin'); break;
     }
@@ -270,6 +271,22 @@ const AppRoutes: React.FC = () => {
             <ShellLayout currentUser={activeUser} onSignOut={signOut}>
               <FacultyModuleViews
                 activeView="Settings"
+                user={activeUser}
+                onNavigate={handleNavigate}
+              />
+            </ShellLayout>
+          </FacultyProtectedRoute>
+        }
+      />
+
+      {/* Route: /udl (UDL Studio & Rubrics) */}
+      <Route
+        path="/udl"
+        element={
+          <FacultyProtectedRoute>
+            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
+              <FacultyModuleViews
+                activeView="UDL Studio"
                 user={activeUser}
                 onNavigate={handleNavigate}
               />

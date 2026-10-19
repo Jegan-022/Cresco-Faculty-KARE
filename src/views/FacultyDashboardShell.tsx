@@ -45,6 +45,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
     'Assessment Review': '/assessment-review',
     'Live Classroom': '/live-classroom',
     Analytics: '/analytics',
+    'UDL Studio': '/udl',
     Settings: '/settings',
     'Admin Portal': '/admin',
   };
@@ -131,7 +132,7 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
-          {(['Dashboard', 'Students', 'Courses', 'Learning Levels', 'Assessment Review', 'Live Classroom', 'Analytics', 'Settings'] as FacultyViewType[]).map((tab) => {
+          {(['Dashboard', 'Students', 'Courses', 'Learning Levels', 'Assessment Review', 'Live Classroom', 'Analytics', 'UDL Studio', 'Settings'] as FacultyViewType[]).map((tab) => {
             const isActive = activeView === tab;
             return (
               <button

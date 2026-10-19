@@ -15,6 +15,7 @@ import {
   StopCircle,
   Award,
   ClipboardCheck,
+  BookOpen
 } from 'lucide-react';
 import type { FacultyUser, FacultyViewType, SubjectiveAssessmentSubmission, LiveClassroomSessionState } from '../types';
 import { EmptyState } from '../components/EmptyState';
@@ -28,6 +29,15 @@ import {
   SAMPLE_BROADCAST_QUESTIONS, 
   INITIAL_INACTIVE_SESSION 
 } from '../services/liveClassroomService';
+import {
+  fetchUdlActivitiesFromFirestore,
+  createOrAssignUdlActivity,
+  fetchUdlSubmissionsFromFirestore,
+  evaluateUdlSubmission,
+  type UdlActivity,
+  type UdlStudentSubmission,
+  CANONICAL_UDL_ACTIVITIES
+} from '../services/udlFacultyService';
 
 interface FacultyModuleViewsProps {
   activeView: FacultyViewType;
@@ -55,6 +65,26 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
   const [reviewFeedback, setReviewFeedback] = useState<string>('Thorough Wireshark trace analysis with correct ISN parsing and SYN cookie explanation.');
   const [reviewMessage, setReviewMessage] = useState<string>('');
 
+  // UDL Studio State
+  const [udlActivities, setUdlActivities] = useState<UdlActivity[]>(CANONICAL_UDL_ACTIVITIES);
+  const [udlSubmissions, setUdlSubmissions] = useState<UdlStudentSubmission[]>([]);
+  const [udlActiveTab, setUdlActiveTab] = useState<'activities' | 'submissions' | 'assign'>('activities');
+  const [selectedUdlSubId, setSelectedUdlSubId] = useState<string>('');
+  const [udlRubricScores, setUdlRubricScores] = useState<{ representation: number; engagement: number; expression: number }>({
+    representation: 30,
+    engagement: 30,
+    expression: 25
+  });
+  const [udlFeedback, setUdlFeedback] = useState<string>('Demonstrates sound understanding of subnet boundaries and TCP dynamics. Good mathematical precision.');
+  const [udlEvaluationMessage, setUdlEvaluationMessage] = useState<string>('');
+  const [isAssigningUdl, setIsAssigningUdl] = useState<boolean>(false);
+  const [newUdlTitle, setNewUdlTitle] = useState('');
+  const [newUdlModule, setNewUdlModule] = useState<'module_a_ipv4' | 'module_b_tcp_udp'>('module_a_ipv4');
+  const [newUdlSection, setNewUdlSection] = useState('CS-4200-A');
+  const [newUdlDueDate, setNewUdlDueDate] = useState('');
+  const [newUdlPoints, setNewUdlPoints] = useState(100);
+  const [newUdlDescription, setNewUdlDescription] = useState('');
+
   // Live Classroom State
   const [liveSession, setLiveSession] = useState<LiveClassroomSessionState>(INITIAL_INACTIVE_SESSION);
   const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
@@ -67,11 +97,22 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
       }
     });
 
+    fetchUdlActivitiesFromFirestore().then((acts) => {
+      setUdlActivities(acts);
+    });
+
+    fetchUdlSubmissionsFromFirestore().then((subs) => {
+      setUdlSubmissions(subs);
+      if (subs.length > 0 && !selectedUdlSubId) {
+        setSelectedUdlSubId(subs[0].id);
+      }
+    });
+
     const unsub = subscribeToLiveClassroom((updated) => {
       setLiveSession(updated);
     });
     return () => unsub();
-  }, []);
+  }, [activeView]);
 
   // 1. STUDENTS ROSTER VIEW (Strictly adheres to DATA RULE: No fabricated student names or numbers)
   if (activeView === 'Students') {
@@ -1037,6 +1078,516 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
             })}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // 4B. UDL STUDIO & RUBRICS VIEW (Universal Design for Learning Architecture)
+  if (activeView === 'UDL Studio') {
+    const selectedUdlSub = udlSubmissions.find(s => s.id === selectedUdlSubId) || udlSubmissions[0];
+    const totalRubricScore = udlRubricScores.representation + udlRubricScores.engagement + udlRubricScores.expression;
+
+    const handleSaveUdlReview = async () => {
+      if (!selectedUdlSub) return;
+      const res = await evaluateUdlSubmission(
+        selectedUdlSub.id,
+        user,
+        udlRubricScores,
+        udlFeedback
+      );
+      if (res.success) {
+        setUdlEvaluationMessage(`✅ Official UDL evaluation recorded for ${selectedUdlSub.studentName} (${res.totalScore} / 100 pts).`);
+        const updatedSubs = await fetchUdlSubmissionsFromFirestore();
+        setUdlSubmissions(updatedSubs);
+      } else {
+        setUdlEvaluationMessage(`❌ Evaluation failed: ${res.error}`);
+      }
+    };
+
+    const handleAssignNewUdl = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newUdlTitle.trim()) return;
+      setIsAssigningUdl(true);
+      await createOrAssignUdlActivity({
+        activityCode: `UDL-${Date.now().toString().slice(-4)}`,
+        courseId: 'CS-4200',
+        moduleId: newUdlModule,
+        title: newUdlTitle,
+        description: newUdlDescription || 'Comprehensive multi-modal learning activity adhering to UDL representation, engagement, and expression guidelines.',
+        learningObjectives: [
+          'Deconstruct network boundaries and protocol mechanics',
+          'Demonstrate mathematical and diagnostic reasoning',
+          'Articulate conclusions across supported response modalities'
+        ],
+        udlDimensions: ['Representation', 'Engagement', 'Action_and_Expression'],
+        assignedSection: newUdlSection,
+        dueDate: newUdlDueDate || new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        maxPoints: newUdlPoints,
+        published: true,
+        createdBy: user.id || user.email,
+        createdByName: user.name,
+        rubricCriteria: [
+          { name: 'Representation & Accuracy', description: 'Mathematical fidelity and structural model precision', maxScore: 35 },
+          { name: 'Engagement & Depth', description: 'Methodical deduction and diagnostic troubleshooting', maxScore: 35 },
+          { name: 'Expression & Articulation', description: 'Clarity, conciseness, and communicative quality', maxScore: 30 }
+        ]
+      }, user);
+
+      const refreshed = await fetchUdlActivitiesFromFirestore();
+      setUdlActivities(refreshed);
+      setIsAssigningUdl(false);
+      setNewUdlTitle('');
+      setNewUdlDescription('');
+      setUdlActiveTab('activities');
+    };
+
+    return (
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 20px 60px' }}>
+        {/* Header with UDL Badges */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--primary)', backgroundColor: 'var(--surface-container)', padding: '2px 8px', borderRadius: '6px' }}>
+                UNIVERSAL DESIGN FOR LEARNING (UDL)
+              </span>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                CS-4200 Computer Networks • Real Persistent Firestore Data
+              </span>
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              UDL Studio, Activity Assignment & Rubric Grading
+            </h1>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Manage multi-modal IPv4 and TCP/UDP learning experiences, assign tasks to cohorts, and evaluate submissions against 3-part UDL rubrics.
+            </p>
+          </div>
+
+          {/* Sub-Tabs */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setUdlActiveTab('activities')}
+              className={`interactive-scale ${udlActiveTab === 'activities' ? 'btn-tactile-primary' : 'btn-outline'}`}
+              style={{ fontSize: '12px', padding: '8px 14px' }}
+            >
+              <BookOpen size={14} />
+              <span>Published Activities ({udlActivities.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUdlActiveTab('submissions')}
+              className={`interactive-scale ${udlActiveTab === 'submissions' ? 'btn-tactile-primary' : 'btn-outline'}`}
+              style={{ fontSize: '12px', padding: '8px 14px' }}
+            >
+              <ClipboardCheck size={14} />
+              <span>Submissions Queue ({udlSubmissions.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUdlActiveTab('assign')}
+              className={`interactive-scale ${udlActiveTab === 'assign' ? 'btn-tactile-primary' : 'btn-outline'}`}
+              style={{ fontSize: '12px', padding: '8px 14px' }}
+            >
+              <Plus size={14} />
+              <span>Assign New Activity</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Evaluation status toast banner */}
+        {udlEvaluationMessage && (
+          <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: 'var(--surface-container)', border: '1px solid var(--primary)', marginBottom: '20px', fontSize: '12.5px', color: 'var(--text-primary)' }}>
+            {udlEvaluationMessage}
+          </div>
+        )}
+
+        {/* TAB 1: PUBLISHED ACTIVITIES */}
+        {udlActiveTab === 'activities' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+              {udlActivities.map(act => (
+                <div key={act.id} className="card-standard" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--surface-container-high)', color: 'var(--primary)' }}>
+                        {act.activityCode} • {act.moduleId === 'module_a_ipv4' ? 'Network Layer' : 'Transport Layer'}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 700 }}>
+                        ● Published
+                      </span>
+                    </div>
+
+                    <h3 style={{ fontFamily: 'var(--font-headline)', fontSize: '17px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                      {act.title}
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
+                      {act.description}
+                    </p>
+
+                    <div style={{ marginBottom: '14px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                        Learning Objectives
+                      </span>
+                      <ul style={{ margin: '6px 0 0 16px', padding: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {act.learningObjectives.map((obj, i) => (
+                          <li key={i} style={{ marginBottom: '4px' }}>{obj}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                        👁 Representation
+                      </span>
+                      <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        🎯 Engagement
+                      </span>
+                      <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        ⚡ Expression
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      Assigned: <strong>{act.assignedSection}</strong> • Due: <strong>{act.dueDate}</strong>
+                    </div>
+                    <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                      {act.maxPoints} pts
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: SUBMISSIONS & RUBRIC GRADING */}
+        {udlActiveTab === 'submissions' && (
+          <div>
+            {udlSubmissions.length === 0 ? (
+              <div className="card-standard" style={{ padding: '60px 24px', textAlign: 'center' }}>
+                <ClipboardCheck size={44} style={{ margin: '0 auto 16px', opacity: 0.35, color: 'var(--primary)' }} />
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                  No Student Submissions in Queue Yet
+                </h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto' }}>
+                  Student attempts from the Student Portal for Subnet Calculations, Written Mathematical Proofs, Wireshark traces, and TCP Troubleshooting will appear here in real time.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', gap: '24px' }}>
+                {/* Left: Submissions list */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h3 style={{ fontSize: '13px', fontFamily: 'var(--font-headline)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    Submissions ({udlSubmissions.length})
+                  </h3>
+                  {udlSubmissions.map(sub => {
+                    const isSelected = sub.id === selectedUdlSub?.id;
+                    return (
+                      <div
+                        key={sub.id}
+                        onClick={() => {
+                          setSelectedUdlSubId(sub.id);
+                          setUdlEvaluationMessage('');
+                        }}
+                        className={`card-standard interactive-scale ${isSelected ? 'selected-border' : ''}`}
+                        style={{
+                          padding: '14px 16px',
+                          cursor: 'pointer',
+                          borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
+                          backgroundColor: isSelected ? 'var(--surface-container-high)' : 'var(--surface-container)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {sub.studentName}
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: sub.isEvaluated ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                            color: sub.isEvaluated ? 'var(--success)' : 'var(--warning)',
+                          }}>
+                            {sub.isEvaluated ? 'Graded' : 'Pending'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                          {sub.studentRegNo} • {sub.modality}
+                        </div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>
+                          Score: <strong style={{ color: 'var(--primary)' }}>{sub.autoScore}/{sub.maxScore}</strong>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Right: Rubric Evaluation Workspace */}
+                {selectedUdlSub && (
+                  <div className="card-standard" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--primary)', fontWeight: 700 }}>
+                          SUBMISSION: {selectedUdlSub.id}
+                        </div>
+                        <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
+                          {selectedUdlSub.studentName} ({selectedUdlSub.studentRegNo})
+                        </h2>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Activity: <strong>{selectedUdlSub.activityId}</strong> • Modality: <strong>{selectedUdlSub.modality}</strong>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Timestamp</div>
+                        <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                          {new Date(selectedUdlSub.submittedAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Student Answers Inspection */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontFamily: 'var(--font-headline)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                        Student Submitted Data & Work Evidence
+                      </h4>
+                      <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'var(--surface-container-low)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-secondary)', maxHeight: '200px', overflowY: 'auto' }}>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                          {JSON.stringify(selectedUdlSub.answers, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+
+                    {/* 3-Part UDL Rubric Scoring */}
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ fontSize: '13px', fontFamily: 'var(--font-headline)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          UDL 3-Dimensional Rubric Assessment
+                        </h4>
+                        <span style={{ fontSize: '15px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--primary)' }}>
+                          Total Score: {totalRubricScore} / 100
+                        </span>
+                      </div>
+
+                      {/* Criterion 1: Representation */}
+                      <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--surface-container)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <div>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>1. Representation & Accuracy</strong>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Fidelity to mathematical models and structural concepts</div>
+                          </div>
+                          <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                            {udlRubricScores.representation} / 35
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="35"
+                          value={udlRubricScores.representation}
+                          onChange={e => setUdlRubricScores(r => ({ ...r, representation: Number(e.target.value) }))}
+                          style={{ width: '100%', cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      {/* Criterion 2: Engagement */}
+                      <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--surface-container)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <div>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>2. Engagement & Problem-Solving</strong>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Persistence through progressive hints and diagnostic reasoning</div>
+                          </div>
+                          <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                            {udlRubricScores.engagement} / 35
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="35"
+                          value={udlRubricScores.engagement}
+                          onChange={e => setUdlRubricScores(r => ({ ...r, engagement: Number(e.target.value) }))}
+                          style={{ width: '100%', cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      {/* Criterion 3: Expression */}
+                      <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--surface-container)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <div>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>3. Action & Expression</strong>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Clear written or calculated response articulation</div>
+                          </div>
+                          <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
+                            {udlRubricScores.expression} / 30
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="30"
+                          value={udlRubricScores.expression}
+                          onChange={e => setUdlRubricScores(r => ({ ...r, expression: Number(e.target.value) }))}
+                          style={{ width: '100%', cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      {/* Feedback Textarea */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                          Faculty Constructive Feedback
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={udlFeedback}
+                          onChange={e => setUdlFeedback(e.target.value)}
+                          className="input-base"
+                          style={{ width: '100%', fontSize: '12px' }}
+                          placeholder="Provide specific feedback on student calculation accuracy or conceptual depth..."
+                        />
+                      </div>
+
+                      {/* Action Button */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={handleSaveUdlReview}
+                          className="btn-tactile-primary interactive-scale"
+                          style={{ fontSize: '12.5px', padding: '10px 20px' }}
+                        >
+                          <Save size={15} />
+                          <span>Record Official UDL Grade ({totalRubricScore}/100)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: ASSIGN NEW ACTIVITY */}
+        {udlActiveTab === 'assign' && (
+          <div className="card-standard" style={{ padding: '28px', maxWidth: '800px', margin: '0 auto' }}>
+            <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>
+              Assign Multi-Modal UDL Activity
+            </h2>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Publish an activity directly to the Student Portal. Authorized students in the assigned section will receive immediate access.
+            </p>
+
+            <form onSubmit={handleAssignNewUdl} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                  Activity Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Subnetting Engineering Lab: /24 Partitioning"
+                  value={newUdlTitle}
+                  onChange={e => setNewUdlTitle(e.target.value)}
+                  className="input-base"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                    Curriculum Module
+                  </label>
+                  <select
+                    value={newUdlModule}
+                    onChange={e => setNewUdlModule(e.target.value as any)}
+                    className="input-base"
+                  >
+                    <option value="module_a_ipv4">Module A: IPv4 Addressing & Subnetting</option>
+                    <option value="module_b_tcp_udp">Module B: TCP & UDP Architecture</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                    Target Class Section
+                  </label>
+                  <select
+                    value={newUdlSection}
+                    onChange={e => setNewUdlSection(e.target.value)}
+                    className="input-base"
+                  >
+                    <option value="CS-4200-A">CS-4200-A (CSE Batch 1)</option>
+                    <option value="CS-4200-B">CS-4200-B (CSE Batch 2)</option>
+                    <option value="CS-4200-C">CS-4200-C (IT Batch)</option>
+                    <option value="All Sections (CS-4200)">All Sections</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                    Submission Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={newUdlDueDate}
+                    onChange={e => setNewUdlDueDate(e.target.value)}
+                    className="input-base"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                    Maximum Points
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={newUdlPoints}
+                    onChange={e => setNewUdlPoints(Number(e.target.value))}
+                    className="input-base"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                  Pedagogical Instructions & Context
+                </label>
+                <textarea
+                  rows={4}
+                  value={newUdlDescription}
+                  onChange={e => setNewUdlDescription(e.target.value)}
+                  placeholder="Detail the problem specifications, available modalities (written, calculation, simulation), and rubric expectations..."
+                  className="input-base"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setUdlActiveTab('activities')}
+                  className="btn-outline interactive-scale"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAssigningUdl}
+                  className="btn-tactile-primary interactive-scale"
+                  style={{ padding: '10px 22px' }}
+                >
+                  <Send size={14} />
+                  <span>{isAssigningUdl ? 'Publishing...' : 'Publish to Live Student Portal'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     );
   }

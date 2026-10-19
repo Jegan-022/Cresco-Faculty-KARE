@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "npx tsx test_faculty_integration.ts && npx tsx test_step27_production_readiness.ts && npx tsx test_step28_final_validation.ts",
+    "test": "npx tsx test_faculty_integration.ts && npx tsx test_step27_production_readiness.ts && npx tsx test_step28_final_validation.ts && npx tsx test_udl_faculty.ts",
+    "test:udl": "npx tsx test_udl_faculty.ts",
     "test:step27": "npx tsx test_step27_production_readiness.ts",
     "test:step28": "npx tsx test_step28_final_validation.ts",
     "preview": "vite preview"

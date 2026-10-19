@@ -7,6 +7,7 @@ export type FacultyViewType =
   | 'Live Classroom'
   | 'Analytics' 
   | 'Settings'
+  | 'UDL Studio'
   | 'Admin Portal';
 
 export interface FacultyUser {
