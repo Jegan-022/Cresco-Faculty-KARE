@@ -12,7 +12,6 @@ import { LogIn } from 'lucide-react';
 const FacultyLogin = React.lazy(() => import('./views/FacultyLogin').then(m => ({ default: m.FacultyLogin })));
 const FacultyDashboardShell = React.lazy(() => import('./views/FacultyDashboardShell').then(m => ({ default: m.FacultyDashboardShell })));
 const FacultyModuleViews = React.lazy(() => import('./views/FacultyModuleViews').then(m => ({ default: m.FacultyModuleViews })));
-const AdminPortalView = React.lazy(() => import('./views/AdminPortalView').then(m => ({ default: m.AdminPortalView })));
 const TermsView = React.lazy(() => import('./views/TermsView').then(m => ({ default: m.TermsView })));
 const PrivacyView = React.lazy(() => import('./views/PrivacyView').then(m => ({ default: m.PrivacyView })));
 
@@ -109,7 +108,6 @@ const AppRoutes: React.FC = () => {
       case 'Analytics': navigate('/analytics'); break;
       case 'UDL Studio': navigate('/udl'); break;
       case 'Settings': navigate('/settings'); break;
-      case 'Admin Portal': navigate('/admin'); break;
     }
   };
 
@@ -296,18 +294,10 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Route: /admin (Administrator Portal) */}
+      {/* Route: /admin (Redirect to dashboard - Faculty only sees Faculty portal) */}
       <Route
         path="/admin"
-        element={
-          <FacultyProtectedRoute>
-            <ShellLayout currentUser={activeUser} onSignOut={signOut}>
-              <Suspense fallback={<FacultyLoadingView />}>
-                <AdminPortalView />
-              </Suspense>
-            </ShellLayout>
-          </FacultyProtectedRoute>
-        }
+        element={<Navigate to="/dashboard" replace />}
       />
 
       {/* Route: /terms (Institutional Terms & Conditions) */}

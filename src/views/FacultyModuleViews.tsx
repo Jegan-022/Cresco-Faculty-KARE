@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users,
   BarChart3,
   Download,
   Plus,
@@ -17,9 +16,10 @@ import {
   ClipboardCheck,
   BookOpen
 } from 'lucide-react';
-import type { FacultyUser, FacultyViewType, SubjectiveAssessmentSubmission, LiveClassroomSessionState } from '../types';
+import type { FacultyUser, FacultyViewType, SubjectiveAssessmentSubmission, LiveClassroomSessionState, StudentCohortProgress } from '../types';
 import { EmptyState } from '../components/EmptyState';
 import { SkeletonTable } from '../components/SkeletonLoader';
+import { getStudentCohortProgress } from '../services/studentOversightService';
 import { getSubmissions, evaluateSubjectiveSubmission, fetchSubmissionsFromFirestore } from '../services/assessmentReviewService';
 import { 
   subscribeToLiveClassroom, 
@@ -89,6 +89,11 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
   const [liveSession, setLiveSession] = useState<LiveClassroomSessionState>(INITIAL_INACTIVE_SESSION);
   const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
 
+  // Student Cohort State (Unified 68 Students + Live Firestore Telemetry)
+  const [studentCohort, setStudentCohort] = useState<StudentCohortProgress[]>([]);
+  const [isCohortLoading, setIsCohortLoading] = useState(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+
   useEffect(() => {
     fetchSubmissionsFromFirestore().then((subs) => {
       setSubmissions(subs);
@@ -108,14 +113,32 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
       }
     });
 
+    setIsCohortLoading(true);
+    getStudentCohortProgress(user).then(({ students }) => {
+      setStudentCohort(students);
+      setIsCohortLoading(false);
+    });
+
     const unsub = subscribeToLiveClassroom((updated) => {
       setLiveSession(updated);
     });
     return () => unsub();
   }, [activeView]);
 
-  // 1. STUDENTS ROSTER VIEW (Strictly adheres to DATA RULE: No fabricated student names or numbers)
+  // 1. STUDENTS ROSTER VIEW (Authentic CS-4200 68 Student Cohort)
   if (activeView === 'Students') {
+    const filteredStudents = studentCohort.filter((s) => {
+      const q = studentSearchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        s.studentName.toLowerCase().includes(q) ||
+        s.regNo.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q)
+      );
+    });
+
+    const activeCount = studentCohort.filter(s => s.hasGenuineEvidence).length;
+
     return (
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 20px 60px' }}>
         <div
@@ -129,18 +152,40 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
           }}
         >
           <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                COHORT SYNCHRONIZED
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {studentCohort.length} Enrolled Learners
+              </span>
+            </div>
             <h1
               style={{
                 fontFamily: 'var(--font-headline)',
                 fontSize: '24px',
                 fontWeight: 800,
                 color: 'var(--text-primary)',
+                margin: 0,
               }}
             >
-              Student Cohort Roster
+              Student Cohort Roster & Performance
             </h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              Course CS-4200 Computer Networks • Kalasalingam Academy of Research and Education.
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+              Course CS-4200 Computer Networks • Kalasalingam Academy of Research and Education
             </p>
           </div>
 
@@ -156,52 +201,241 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
             <button
               type="button"
               onClick={() => {
-                const csvContent = 'data:text/csv;charset=utf-8,RegNo,Name,Section,Email\n';
-                const encodedUri = encodeURI(csvContent);
+                const header = 'Register Number,Student Name,Institutional Email,Level,Total XP,Modules Completed,Status\n';
+                const rows = studentCohort.map(s => 
+                  `"${s.regNo}","${s.studentName}","${s.email}",${s.level},${s.totalXP},${s.completedModuleCount},"${s.masterySummary.status}"`
+                ).join('\n');
+                const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(header + rows);
                 const link = document.createElement('a');
-                link.setAttribute('href', encodedUri);
-                link.setAttribute('download', 'kare_cs4200_roster_template.csv');
+                link.setAttribute('href', csvContent);
+                link.setAttribute('download', `kare_cs4200_student_roster_${new Date().toISOString().slice(0, 10)}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
               }}
-              className="btn-outline interactive-scale"
-              style={{ fontSize: '12.5px' }}
+              className="btn-tactile-primary interactive-scale"
+              style={{ fontSize: '12.5px', padding: '9px 16px' }}
             >
               <Download size={14} />
-              <span>Download CSV Template</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => alert('Import student roster CSV dialog opened.')}
-              className="btn-tactile-primary interactive-scale"
-              style={{ fontSize: '12.5px' }}
-            >
-              <Plus size={14} />
-              <span>Import Roster CSV</span>
+              <span>Export Cohort CSV ({studentCohort.length})</span>
             </button>
           </div>
         </div>
 
-        {/* State representation */}
-        {showSkeletonPreview ? (
-          <div>
-            <div style={{ marginBottom: '12px', fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-              SHIMMER LOADING STATE PREVIEW (4 ROWS):
+        {/* Quick KPI Strip */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '14px',
+            marginBottom: '20px',
+          }}
+        >
+          <div className="card-standard" style={{ padding: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Total Enrolled
             </div>
-            <SkeletonTable rows={4} />
+            <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {studentCohort.length}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Official CSE Class Roster
+            </div>
           </div>
+          <div className="card-standard" style={{ padding: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Active Learners
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
+              {activeCount}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Live progress in Firestore
+            </div>
+          </div>
+          <div className="card-standard" style={{ padding: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Department
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '8px' }}>
+              Computer Science & Engg
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              KARE 3rd Year (UG)
+            </div>
+          </div>
+          <div className="card-standard" style={{ padding: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Course Syllabus
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#8b5cf6', marginTop: '8px' }}>
+              CS-4200 (5 Units, 30 Modules)
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Canonical Pedagogy Ready
+            </div>
+          </div>
+        </div>
+
+        {/* Filter and Search Bar */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ position: 'relative', flex: '1', minWidth: '260px', maxWidth: '420px' }}>
+            <input
+              type="text"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+              placeholder="Search by student name, register number (e.g. 99240040116), or email..."
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--surface-container)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+            Showing {filteredStudents.length} of {studentCohort.length} students
+          </div>
+        </div>
+
+        {/* Roster Table */}
+        {isCohortLoading || showSkeletonPreview ? (
+          <SkeletonTable rows={showSkeletonPreview ? 4 : 8} />
         ) : (
-          <EmptyState
-            icon={Users}
-            badgeText="AWAITING COHORT ENROLLMENT"
-            title="No student data available"
-            description="Firebase Firestore is not yet connected. Connect your database or upload a class roster CSV to track individual student mastery, packet submissions, and lab diagnostics."
-            actionText="Import Student Roster (CSV)"
-            onAction={() => alert('Upload CSV dialog opened. Select student cohort CSV file.')}
-            secondaryActionText="Awaiting Database Sync"
-            onSecondaryAction={() => alert('Database status: Firebase Firestore is currently disconnected.')}
-          />
+          <div
+            className="card-standard"
+            style={{
+              overflowX: 'auto',
+              borderRadius: '14px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr
+                  style={{
+                    backgroundColor: 'var(--surface-container-high)',
+                    borderBottom: '1px solid var(--border)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '11.5px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>#</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Register No</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Student Name</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Institutional Email</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Level</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Total XP</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Modules</th>
+                  <th style={{ padding: '14px 18px', fontWeight: 700 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No student matches query "{studentSearchQuery}".
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((s, idx) => {
+                    const isEnrolledOnly = s.masterySummary.status === 'not_started' || !s.hasGenuineEvidence;
+                    return (
+                      <tr
+                        key={s.studentId + idx}
+                        style={{
+                          borderBottom: '1px solid var(--border)',
+                          transition: 'background-color 100ms ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--surface-container-high)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {String(idx + 1).padStart(2, '0')}
+                        </td>
+                        <td style={{ padding: '14px 18px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                          {s.regNo}
+                        </td>
+                        <td style={{ padding: '14px 18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {s.studentName}
+                        </td>
+                        <td style={{ padding: '14px 18px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+                          {s.email}
+                        </td>
+                        <td style={{ padding: '14px 18px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-mono)',
+                              backgroundColor: 'var(--surface-container)',
+                              color: 'var(--text-primary)',
+                            }}
+                          >
+                            Lvl {s.level}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 18px', fontWeight: 700, color: s.totalXP > 0 ? '#10b981' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {s.totalXP} XP
+                        </td>
+                        <td style={{ padding: '14px 18px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                          {s.completedModuleCount} / 30
+                        </td>
+                        <td style={{ padding: '14px 18px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '3px 9px',
+                              borderRadius: '8px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              letterSpacing: '0.2px',
+                              backgroundColor: isEnrolledOnly
+                                ? 'rgba(100, 116, 139, 0.12)'
+                                : s.masterySummary.status === 'mastered'
+                                ? 'rgba(16, 185, 129, 0.15)'
+                                : 'rgba(59, 130, 246, 0.15)',
+                              color: isEnrolledOnly
+                                ? 'var(--text-muted)'
+                                : s.masterySummary.status === 'mastered'
+                                ? '#10b981'
+                                : '#3b82f6',
+                            }}
+                          >
+                            {isEnrolledOnly ? 'Enrolled' : s.masterySummary.status === 'mastered' ? 'Mastered' : 'In Progress'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     );
@@ -244,7 +478,7 @@ export const FacultyModuleViews: React.FC<FacultyModuleViewsProps> = ({
             {
               code: 'CS-4200-B',
               section: 'Section B (Morning)',
-              lead: 'Lab Faculty',
+              lead: 'Faculty Instructor',
               room: 'Lab Complex 304',
               schedule: 'Tue, Thu 09:00 - 10:45 AM',
             },

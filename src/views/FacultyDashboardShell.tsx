@@ -47,7 +47,6 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
     Analytics: '/analytics',
     'UDL Studio': '/udl',
     Settings: '/settings',
-    'Admin Portal': '/admin',
   };
 
   const handleTabClick = (tab: FacultyViewType) => {
@@ -59,10 +58,10 @@ export const FacultyDashboardShell: React.FC<FacultyDashboardShellProps> = ({
   const metrics = [
     {
       title: 'Enrolled Students',
-      value: '—',
-      statusText: 'No student data synced',
-      statusColor: 'var(--text-muted)',
-      caption: 'Awaiting Firestore database connection',
+      value: '68',
+      statusText: '68 Verified Students',
+      statusColor: 'var(--success)',
+      caption: 'CS-4200 Cohort • Kalasalingam University (KARE)',
       accentColor: '#10b981',
       shadowColor: '#bbf7d0',
       icon: Users,

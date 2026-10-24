@@ -41,11 +41,11 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       department: 'Computer Science & Engineering',
     },
     {
-      title: 'Lab Instructor',
-      email: 'lab.faculty@klu.ac.in',
-      role: 'Lab Faculty' as const,
-      designation: 'Associate Professor',
-      staffId: 'FAC-LAB-4200',
+      title: 'Faculty Instructor',
+      email: 'faculty.cs4200@klu.ac.in',
+      role: 'Assistant Professor' as const,
+      designation: 'Assistant Professor',
+      staffId: 'FAC-INST-4200',
       department: 'Computer Science & Engineering',
     },
   ];
@@ -84,7 +84,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       setIsLoading(false);
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('auth/invalid-credential')) {
-        setErrorMessage('Invalid faculty credentials. Click "Course Coordinator" or "Lab Instructor" preset above to auto-fill verified staging credentials.');
+        setErrorMessage('Invalid faculty credentials. Click "Course Coordinator" or "Faculty Instructor" preset above to auto-fill verified staging credentials.');
       } else {
         setErrorMessage(msg);
       }

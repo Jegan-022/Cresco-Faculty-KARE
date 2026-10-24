@@ -9,10 +9,10 @@ import {
   Settings,
   X,
   ExternalLink,
-  Shield,
   Activity,
   ClipboardCheck,
   Radio,
+  ShieldCheck,
 } from 'lucide-react';
 import type { FacultyViewType, FacultyUser } from '../types';
 import { BrandLogo } from './BrandLogo';
@@ -48,7 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { index: '07', label: 'Analytics', path: '/analytics', icon: BarChart3 },
     { index: '08', label: 'UDL Studio', path: '/udl', icon: Activity, badge: 'Live Rubric' },
     { index: '09', label: 'Settings', path: '/settings', icon: Settings },
-    { index: '10', label: 'Admin Portal', path: '/admin', icon: Shield, badge: 'Cross-App' },
   ];
 
   if (!isOpen) return null;
@@ -311,7 +310,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               color: 'var(--text-muted)',
             }}
           >
-            <Shield size={13} style={{ color: 'var(--primary)' }} />
+            <ShieldCheck size={13} style={{ color: 'var(--primary)' }} />
             <span>KARE CAMPUS CLUSTER 01</span>
           </div>
           <div

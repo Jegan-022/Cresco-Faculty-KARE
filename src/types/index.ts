@@ -7,8 +7,7 @@ export type FacultyViewType =
   | 'Live Classroom'
   | 'Analytics' 
   | 'Settings'
-  | 'UDL Studio'
-  | 'Admin Portal';
+  | 'UDL Studio';
 
 export interface FacultyUser {
   id: string; // Firebase Auth UID or institutional staffId
@@ -17,7 +16,7 @@ export interface FacultyUser {
   department: string;
   designation: string;
   institution: string;
-  role: 'Course Coordinator' | 'Lab Faculty' | 'Assistant Professor' | 'Professor';
+  role: 'Course Coordinator' | 'Assistant Professor' | 'Professor';
   avatar?: string;
   staffId: string;
   isVerifiedFaculty?: boolean;
