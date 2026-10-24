@@ -40,12 +40,12 @@ function assert(condition: boolean, testName: string, detail?: string) {
 async function runTestSuite() {
   // Test Faculty Member Entity
   const verifiedFaculty: FacultyUser = {
-    id: 'usr_fac_coordinator',
-    staffId: 'FAC-COORD-4200',
-    name: 'Dr. Ramesh Kumar',
-    email: 'coordinator.cs4200@klu.ac.in',
+    id: 'usr_fac_vijay',
+    staffId: 'FAC-VIJAY-4200',
+    name: 'Dr. M. Vijay',
+    email: 'vijay.m@klu.ac.in',
     department: 'Computer Science & Engineering',
-    designation: 'Professor & Chair',
+    designation: 'Associate Professor & Course Coordinator',
     institution: 'Kalasalingam Academy of Research and Education',
     role: 'Course Coordinator',
     isVerifiedFaculty: true,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Sparkles, ExternalLink, School, Radio, X, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, ExternalLink, School, Radio, X, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LiquidLinesCanvas } from '../components/LiquidLinesCanvas';
 import { BrandLogo } from '../components/BrandLogo';
@@ -16,8 +16,8 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   onExploreStudentPortal,
 }) => {
   const { signIn, signInWithGoogle, sendPasswordReset } = useFacultyAuth();
-  const [email, setEmail] = useState('coordinator.cs4200@klu.ac.in');
-  const [password, setPassword] = useState('cresco@kare2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -29,32 +29,6 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotStatus, setForgotStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [forgotMessage, setForgotMessage] = useState('');
-
-  // Staging Demo Accounts (clearly labelled as institutional credentials awaiting Gate 4 claim)
-  const stagingPresets = [
-    {
-      title: 'Course Coordinator',
-      email: 'coordinator.cs4200@klu.ac.in',
-      role: 'Course Coordinator' as const,
-      designation: 'Professor & Chair',
-      staffId: 'FAC-COORD-4200',
-      department: 'Computer Science & Engineering',
-    },
-    {
-      title: 'Faculty Instructor',
-      email: 'faculty.cs4200@klu.ac.in',
-      role: 'Assistant Professor' as const,
-      designation: 'Assistant Professor',
-      staffId: 'FAC-INST-4200',
-      department: 'Computer Science & Engineering',
-    },
-  ];
-
-  const handleSelectPreset = (preset: (typeof stagingPresets)[0]) => {
-    setEmail(preset.email);
-    setPassword('cresco@kare2026');
-    setErrorMessage('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +58,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
       setIsLoading(false);
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('auth/invalid-credential')) {
-        setErrorMessage('Invalid faculty credentials. Click "Course Coordinator" or "Faculty Instructor" preset above to auto-fill verified staging credentials.');
+        setErrorMessage('Invalid faculty credentials. Please check your username and password.');
       } else {
         setErrorMessage(msg);
       }
@@ -343,86 +317,6 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                 </div>
               )}
 
-              {/* Quick Preset Selector (Clearly labeled as staging presets) */}
-              <div
-                style={{
-                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                  border: '1px solid rgba(56, 189, 248, 0.2)',
-                  borderRadius: '12px',
-                  padding: '10px 12px',
-                  marginBottom: '20px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontFamily: 'var(--font-mono)',
-                      color: '#38bdf8',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                    }}
-                  >
-                    <Sparkles size={12} />
-                    STAGING DEMO ACCESS
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#64748b' }}>Select role</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {stagingPresets.map((preset) => {
-                    const isSelected = email === preset.email;
-                    return (
-                      <button
-                        key={preset.staffId}
-                        type="button"
-                        onClick={() => handleSelectPreset(preset)}
-                        style={{
-                          textAlign: 'left',
-                          padding: '7px 9px',
-                          borderRadius: '8px',
-                          backgroundColor: isSelected ? 'rgba(6, 182, 212, 0.18)' : 'rgba(30, 41, 59, 0.6)',
-                          border: isSelected
-                            ? '1px solid #06b6d4'
-                            : '1px solid rgba(51, 65, 85, 0.6)',
-                          cursor: 'pointer',
-                          transition: 'all 150ms ease',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: isSelected ? '#38bdf8' : '#e2e8f0',
-                            fontFamily: 'var(--font-headline)',
-                          }}
-                        >
-                          {preset.title}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '9.5px',
-                            color: '#94a3b8',
-                            fontFamily: 'var(--font-mono)',
-                            marginTop: '2px',
-                          }}
-                        >
-                          {preset.email.split('@')[0]}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Form Element */}
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
@@ -450,7 +344,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. coordinator.cs4200@klu.ac.in"
+                      placeholder="e.g. vijay.m@klu.ac.in"
                       className="input-mono"
                       style={{
                         width: '100%',
@@ -982,7 +876,7 @@ export const FacultyLogin: React.FC<FacultyLoginProps> = ({
                   required
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="e.g. coordinator.cs4200@klu.ac.in"
+                  placeholder="e.g. vijay.m@klu.ac.in"
                   className="input-mono"
                   style={{
                     width: '100%',

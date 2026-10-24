@@ -112,14 +112,14 @@ const AppRoutes: React.FC = () => {
   };
 
   const activeUser = user || {
-    id: 'FAC-STANDBY',
-    name: 'Faculty Instructor',
-    email: 'faculty@klu.ac.in',
+    id: 'FAC-VIJAY-4200',
+    name: 'Dr. M. Vijay',
+    email: 'vijay.m@klu.ac.in',
     department: 'Computer Science & Engineering',
-    designation: 'Faculty Member',
+    designation: 'Associate Professor & Course Coordinator',
     institution: 'KARE',
     role: 'Course Coordinator',
-    staffId: 'FAC-STANDBY'
+    staffId: 'FAC-VIJAY-4200'
   };
 
   return (
