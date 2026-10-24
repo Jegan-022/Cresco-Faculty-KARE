@@ -75,7 +75,11 @@ async function runStep28Validation() {
 
   console.log('\n--- 2. STUDENT APPLICATION INTEGRITY & SAFETY CONTRACTS ---');
   // Student Firebase applet config check
-  const studentConfigPath = path.resolve(process.cwd(), '../student/cresco CN/firebase-applet-config.json');
+  const candidateConfigPaths = [
+    path.resolve(process.cwd(), '../student/firebase-applet-config.json'),
+    path.resolve(process.cwd(), '../student/cresco CN/firebase-applet-config.json'),
+  ];
+  const studentConfigPath = candidateConfigPaths.find(p => fs.existsSync(p)) || candidateConfigPaths[0];
   const studentConfig = JSON.parse(fs.readFileSync(studentConfigPath, 'utf-8'));
 
   assert(
@@ -89,7 +93,11 @@ async function runStep28Validation() {
   );
 
   // Student ErrorBoundary and reduced motion CSS presence
-  const studentCssPath = path.resolve(process.cwd(), '../student/cresco CN/src/index.css');
+  const candidateCssPaths = [
+    path.resolve(process.cwd(), '../student/src/index.css'),
+    path.resolve(process.cwd(), '../student/cresco CN/src/index.css'),
+  ];
+  const studentCssPath = candidateCssPaths.find(p => fs.existsSync(p)) || candidateCssPaths[0];
   const studentCss = fs.readFileSync(studentCssPath, 'utf-8');
   assert(
     studentCss.includes('@media (prefers-reduced-motion: reduce)'),
@@ -202,7 +210,7 @@ async function runStep28Validation() {
     'Security: Faculty app client bundle contains zero private server keys'
   );
   assert(
-    !fs.readFileSync(path.resolve(process.cwd(), '../student/cresco CN/firebase-applet-config.json'), 'utf-8').includes('private_key'),
+    !fs.readFileSync(studentConfigPath, 'utf-8').includes('private_key'),
     'Security: Student app client bundle contains zero private server keys'
   );
 

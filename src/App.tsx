@@ -4,6 +4,7 @@ import { FacultyAuthProvider, useFacultyAuth, FacultyProtectedRoute, FacultyLoad
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { FacultyIntroOverlay } from './components/FacultyIntroOverlay';
 import type { FacultyUser, FacultyViewType } from './types';
 import { LogIn } from 'lucide-react';
 
@@ -336,14 +337,29 @@ const AppRoutes: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  // Show intro loading screen each time the website is opened or refreshed
+  const [introActive, setIntroActive] = useState(true);
+
+  const handleIntroComplete = () => {
+    try {
+      sessionStorage.setItem('cresco_faculty_intro_seen', 'true');
+    } catch {}
+    setIntroActive(false);
+  };
+
   return (
-    <BrowserRouter>
-      <FacultyAuthProvider>
-        <ErrorBoundary fallbackTitle="Faculty Portal Runtime Exception">
-          <AppRoutes />
-        </ErrorBoundary>
-      </FacultyAuthProvider>
-    </BrowserRouter>
+    <>
+      {introActive && (
+        <FacultyIntroOverlay onComplete={handleIntroComplete} />
+      )}
+      <BrowserRouter>
+        <FacultyAuthProvider>
+          <ErrorBoundary fallbackTitle="Faculty Portal Runtime Exception">
+            <AppRoutes />
+          </ErrorBoundary>
+        </FacultyAuthProvider>
+      </BrowserRouter>
+    </>
   );
 };
 
